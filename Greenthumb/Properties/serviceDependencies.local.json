@@ -1,0 +1,18 @@
+{
+  "dependencies": {
+    "identityapp1": {
+      "connectionInfo": "App registration: greenthumb, Tenant: Default Directory (essigj88outlook.onmicrosoft.com - Microsoft Entra ID)",
+      "type": "identityapp.default"
+    },
+    "mssql1": {
+      "serviceConnectorResourceId": "",
+      "containerPorts": "1433:1433",
+      "secretStore": "LocalSecretsFile",
+      "containerName": "mssql",
+      "containerImage": "mcr.microsoft.com/mssql/server:2019-latest",
+      "resourceId": null,
+      "type": "mssql.container",
+      "connectionId": "ConnectionStrings:DefaultConnection"
+    }
+  }
+}
