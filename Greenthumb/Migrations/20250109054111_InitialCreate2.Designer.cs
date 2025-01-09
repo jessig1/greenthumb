@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Greenthumb.Migrations
 {
     [DbContext(typeof(GreenthumbContext))]
-    [Migration("20250109044353_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20250109054111_InitialCreate2")]
+    partial class InitialCreate2
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

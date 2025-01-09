@@ -55,6 +55,7 @@ using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     var context = services.GetRequiredService<GreenthumbContext>();
+    DbInitializer.Initialize(context);
 }
 
 app.Run();

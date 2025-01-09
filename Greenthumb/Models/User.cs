@@ -10,6 +10,6 @@ namespace Greenthumb.Models
         public string FirstName { get; set; }
         public DateTime SignupDate { get; set; }
 
-        public ICollection<Plant> Plants { get; set; }
+        //public ICollection<Plant> Plants { get; set; }
     }
 }

@@ -3,9 +3,10 @@
     "identityapp1": {
       "type": "identityapp"
     },
-    "mssql1": {
+    "mssql2": {
       "type": "mssql",
-      "connectionId": "ConnectionStrings:DefaultConnection"
+      "connectionId": "ConnectionStrings:GreenthumbContext",
+      "dynamicId": null
     }
   }
 }

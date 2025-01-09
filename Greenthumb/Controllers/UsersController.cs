@@ -1,23 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-using Greenthumb.Data;
+﻿using Greenthumb.Data;
 using Greenthumb.Models;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Greenthumb.Controllers
 {
     public class UsersController : Controller
     {
+
         private readonly GreenthumbContext _context;
 
         public UsersController(GreenthumbContext context)
         {
             _context = context;
         }
+
 
         // GET: Users
         public async Task<IActionResult> Index()

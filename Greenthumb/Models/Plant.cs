@@ -4,7 +4,9 @@ namespace Greenthumb.Models
     public class Plant
     {
         public int PlantID { get; set; }
+        public int UserID { get; set; }
 
+        public int CareID { get; set; }
         public string Location { get; set; }
 
         public string Name { get; set; }
