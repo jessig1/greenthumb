@@ -17,9 +17,52 @@ namespace Greenthumb.Controllers
 
 
         // GET: Users
-        public async Task<IActionResult> Index()
-        {
-            return View(await _context.Users.ToListAsync());
+        public async Task<IActionResult> Index(string sortOrder,
+        string currentFilter,
+        string searchString,
+        int? pageNumber)
+            {
+            ViewData["CurrentSort"] = sortOrder;
+            ViewData["NameSortParm"] = String.IsNullOrEmpty(sortOrder) ? "name_desc" : "";
+            ViewData["DateSortParm"] = sortOrder == "Date" ? "date_desc" : "Date";
+            
+
+            if (searchString != null)
+            {
+                pageNumber = 1;
+            }
+            else
+            {
+                searchString = currentFilter;
+            }
+
+            ViewData["CurrentFilter"] = searchString;
+
+            var users = from s in _context.Users
+                        select s;
+            if (!String.IsNullOrEmpty(searchString))
+            {
+                users = users.Where(s => s.LastName.Contains(searchString)
+                                       || s.FirstName.Contains(searchString));
+            }
+            switch (sortOrder)
+                {
+                case "name_desc":
+                    users = users.OrderByDescending(s => s.LastName);
+                    break;
+                case "Date":
+                    users = users.OrderBy(s => s.SignupDate);
+                    break;
+                case "date_desc":
+                    users = users.OrderByDescending(s => s.SignupDate);
+                    break;
+                default:
+                    users = users.OrderBy(s => s.LastName);
+                    break;
+            }
+            int pageSize = 3;
+            return View(await PaginatedList<User>.CreateAsync(users.AsNoTracking(), pageNumber ?? 1, pageSize));
+            //return View(await _context.Users.ToListAsync());
         }
 
         // GET: Users/Details/5
