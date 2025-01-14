@@ -1,0 +1,30 @@
+﻿@model IEnumerable<Greenthumb.Models.GreenthumbViewModels.EnrollmentDateGroup>
+
+@{
+    ViewData["Title"] = "About";
+}
+
+<h1>About</h1>
+<table>
+    <tr>
+        <th>
+            <h4>Greenthumb</h4>
+        </th>
+        <th>
+            <h4>Greenthumb</h4>
+        </th>
+    </tr>
+
+    @foreach (var item in Model)
+    {
+        <tr>
+            <td>
+                <h4>@Html.DisplayFor(modelItem => item.SignupDate)</h4>
+            </td>
+            <td>
+                <h4>@item.UserCount</h4>
+            </td>
+        </tr>
+    }
+
+</table>
