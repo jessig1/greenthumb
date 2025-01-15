@@ -15,7 +15,7 @@ namespace Greenthumb.Models
 
         public int Quantity { get; set; }
 
-        public User User { get; set; }
+        public DisplayFormat User { get; set; }
 
         public Care Care { get; set; }
     }

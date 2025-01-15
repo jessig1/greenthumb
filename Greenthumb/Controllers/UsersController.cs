@@ -61,7 +61,7 @@ namespace Greenthumb.Controllers
                     break;
             }
             int pageSize = 3;
-            return View(await PaginatedList<User>.CreateAsync(users.AsNoTracking(), pageNumber ?? 1, pageSize));
+            return View(await PaginatedList<DisplayFormat>.CreateAsync(users.AsNoTracking(), pageNumber ?? 1, pageSize));
             //return View(await _context.Users.ToListAsync());
         }
 
@@ -94,7 +94,7 @@ namespace Greenthumb.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("ID,LastName,FirstName,SignupDate")] User user)
+        public async Task<IActionResult> Create([Bind("ID,LastName,FirstName,SignupDate")] DisplayFormat user)
         {
             if (ModelState.IsValid)
             {
@@ -126,7 +126,7 @@ namespace Greenthumb.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("ID,LastName,FirstName,SignupDate")] User user)
+        public async Task<IActionResult> Edit(int id, [Bind("ID,LastName,FirstName,SignupDate")] DisplayFormat user)
         {
             if (id != user.ID)
             {

@@ -14,13 +14,13 @@ namespace Greenthumb.Data
         {
         }
 
-        public DbSet<User> Users { get; set; }
+        public DbSet<DisplayFormat> Users { get; set; }
         public DbSet<Plant> Plants { get; set; }
         public DbSet<Care> Cares { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<User>().ToTable("User");
+            modelBuilder.Entity<DisplayFormat>().ToTable("User");
             modelBuilder.Entity<Plant>().ToTable("Plant");
             modelBuilder.Entity<Care>().ToTable("Care");
         }

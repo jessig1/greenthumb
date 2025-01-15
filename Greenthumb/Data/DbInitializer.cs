@@ -27,13 +27,13 @@ namespace Greenthumb.Data
         }
         context.SaveChanges();
 
-        var users = new User[]
+        var users = new DisplayFormat[]
         {
-        new User { LastName = "Johnson", FirstName = "John",  SignupDate = DateTime.Parse("2018-09-01") },
-        new User { LastName = "Doe", FirstName = "Jane", SignupDate = DateTime.Parse("2019-05-15") },
-        new User { LastName = "Smith", FirstName = "Michael",  SignupDate = DateTime.Parse("2020-02-10") }
+        new DisplayFormat { LastName = "Johnson", FirstName = "John",  SignupDate = DateTime.Parse("2018-09-01") },
+        new DisplayFormat { LastName = "Doe", FirstName = "Jane", SignupDate = DateTime.Parse("2019-05-15") },
+        new DisplayFormat { LastName = "Smith", FirstName = "Michael",  SignupDate = DateTime.Parse("2020-02-10") }
         };
-        foreach (User u in users)
+        foreach (DisplayFormat u in users)
         {
             context.Users.Add(u);
         }
