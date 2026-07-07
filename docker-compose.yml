@@ -9,6 +9,13 @@ services:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      # Local-only dev database; trust any host that can reach the container. Docker Desktop's
+      # networking has been observed to present host->container connections under a
+      # bridge-gateway IP (e.g. 172.18.0.1) rather than 127.0.0.1, which the default pg_hba.conf
+      # (exact loopback only) then rejects. Mounted outside the data dir so initdb doesn't
+      # regenerate over it.
+      - ./pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+    command: ["postgres", "-c", "hba_file=/etc/postgresql/pg_hba.conf"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U greenthumb -d greenthumb"]
       interval: 5s

@@ -1,0 +1,9 @@
+{
+  "name": "greenthumb-tooling",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Repo-wide dev tooling (not the app itself - see backend/ and frontend/)",
+  "devDependencies": {
+    "playwright-core": "^1.61.1"
+  }
+}

@@ -7,5 +7,12 @@ Thumbs.db
 .env.local
 *.local.env
 
-# Claude Code personal overrides (not shared)
+# Claude Code personal overrides and session state (not shared)
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
+
+# Dev server logs (make backend-start / frontend-start)
+.dev-logs/
+
+# Root-level tooling deps (playwright-core for .claude/skills/run-app)
+node_modules/
