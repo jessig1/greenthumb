@@ -10,24 +10,29 @@ specific to this stack.
 
 ```
 src/
-  api/          client.ts (fetch wrapper + dev-auth header), types.ts (mirrors backend DTOs)
+  api/          client.ts (fetch wrapper + bearer-token auth), types.ts (mirrors backend DTOs)
   components/   shared UI - components/ui/ is shadcn-generated, components/layout/ is app-specific
-  features/     one folder per domain: gardens/ containers/ plants/ plantings/
+  features/     one folder per domain: auth/ gardens/ containers/ plants/ plantings/
   lib/          utils.ts (shadcn's cn()), labels.ts (enum → display-label helpers)
   routes/       React Router route tree
 ```
 
 Each `features/<name>/` folder holds `api.ts` (React Query hooks for that resource) plus its page
 and dialog components (e.g. `GardensListPage.tsx`, `GardenDetailPage.tsx`, `GardenFormDialog.tsx`).
+`features/auth/` is the exception to the React-Query-hooks pattern for reads: `AuthContext.tsx`
+holds auth state in a plain context (token persisted to `localStorage`, current user fetched once
+via `GET /api/v1/me` on mount) rather than a query hook, since routing (`ProtectedRoute.tsx`) needs
+synchronous access to "are we authenticated" before any query would normally fire.
 
 ## API client pattern
 
 `api/client.ts` exports a tiny `api.get/post/put/delete` wrapper around `fetch` that attaches
-`Content-Type` and the dev-auth header (`X-Dev-User-Id`, currently hardcoded to `local-dev-user` -
-see the root `CLAUDE.md`'s auth-stub note) to every request, and throws a typed `ApiError` on a
-non-OK response. Every feature's `api.ts` builds React Query hooks on top of this - one `useQuery`
-per read, one `useMutation` (invalidating the relevant query keys `onSuccess`) per write. Don't call
-`fetch` directly from a component; go through `api.ts`.
+`Content-Type` and, once logged in, `Authorization: Bearer <token>` (set via `setAuthToken`, called
+by `features/auth/AuthContext.tsx`) to every request, and throws a typed `ApiError` on a non-OK
+response. A `setUnauthorizedHandler` callback fires on any `401`, letting `AuthContext` log the user
+out if a token expires mid-session. Every feature's `api.ts` builds React Query hooks on top of
+this - one `useQuery` per read, one `useMutation` (invalidating the relevant query keys `onSuccess`)
+per write. Don't call `fetch` directly from a component; go through `api.ts`.
 
 `api/types.ts` hand-mirrors the backend's response/request DTOs. There's no codegen from the
 OpenAPI spec yet - if a backend DTO's shape changes, update this file to match (and check

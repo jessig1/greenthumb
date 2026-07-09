@@ -14,6 +14,8 @@ const FRONTEND_URL = process.env.GREENTHUMB_FRONTEND_URL ?? 'http://localhost:51
 const BACKEND_URL = process.env.GREENTHUMB_BACKEND_URL ?? 'http://localhost:8080';
 const SHOT_DIR = path.resolve(import.meta.dirname, '../../../.dev-logs/screenshots');
 const TEST_GARDEN_NAME = 'run-app-verify';
+const TEST_EMAIL = `run-app-verify-${Date.now()}@example.com`;
+const TEST_PASSWORD = 'run-app-verify-password';
 
 const BROWSER_CANDIDATES = [
   'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
@@ -48,7 +50,19 @@ async function main() {
     console.log('  screenshot:', name);
   };
 
+  let authToken;
   try {
+    console.log('--- register a fresh user ---');
+    await page.goto(`${FRONTEND_URL}/register`, { waitUntil: 'networkidle' });
+    await page.fill('#displayName', 'Run App Verify');
+    await page.fill('#email', TEST_EMAIL);
+    await page.fill('#password', TEST_PASSWORD);
+    await page.click('button[type="submit"]:has-text("Create account")');
+    await page.waitForSelector('h1:has-text("Your gardens")', { timeout: 10000 });
+    await shot('00-dashboard-empty');
+    authToken = await page.evaluate(() => localStorage.getItem('greenthumb.authToken'));
+    if (!authToken) throw new Error('No auth token found in localStorage after registration');
+
     console.log('--- plant catalog renders ---');
     await page.goto(`${FRONTEND_URL}/plants`, { waitUntil: 'networkidle' });
     await page.waitForSelector('h1:has-text("Plant catalog")');
@@ -98,15 +112,11 @@ async function main() {
   }
 
   console.log('\n--- cleanup: deleting test garden via API ---');
-  const gardens = await fetch(`${BACKEND_URL}/api/v1/gardens`, {
-    headers: { 'X-Dev-User-Id': 'local-dev-user' },
-  }).then((r) => r.json());
+  const authHeaders = { Authorization: `Bearer ${authToken}` };
+  const gardens = await fetch(`${BACKEND_URL}/api/v1/gardens`, { headers: authHeaders }).then((r) => r.json());
   const testGarden = gardens.find((g) => g.name === TEST_GARDEN_NAME);
   if (testGarden) {
-    await fetch(`${BACKEND_URL}/api/v1/gardens/${testGarden.id}`, {
-      method: 'DELETE',
-      headers: { 'X-Dev-User-Id': 'local-dev-user' },
-    });
+    await fetch(`${BACKEND_URL}/api/v1/gardens/${testGarden.id}`, { method: 'DELETE', headers: authHeaders });
     console.log('  deleted', testGarden.id);
   }
 

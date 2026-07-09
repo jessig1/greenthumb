@@ -1,8 +1,6 @@
 package com.greenthumb.backend.common.web;
 
 import jakarta.validation.ConstraintViolationException;
-import java.time.Instant;
-import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -22,6 +20,11 @@ public class GlobalExceptionHandler {
         return errorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<Object> handleUnauthorized(UnauthorizedException ex) {
+        return errorResponse(HttpStatus.UNAUTHORIZED, ex.getMessage());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Object> handleValidation(MethodArgumentNotValidException ex) {
         String message = ex.getBindingResult().getFieldErrors().stream()
@@ -37,7 +40,6 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<Object> errorResponse(HttpStatus status, String message) {
-        return ResponseEntity.status(status)
-            .body(Map.of("timestamp", Instant.now().toString(), "status", status.value(), "message", message));
+        return ResponseEntity.status(status).body(ApiErrorBody.of(status, message));
     }
 }

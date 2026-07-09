@@ -20,10 +20,13 @@ make up       # starts Postgres, backend (:8080), frontend (:5173); polls for re
 
 ## Auth
 
-There's no login screen. Every request carries a fixed `X-Dev-User-Id: local-dev-user` header
-(see root `CLAUDE.md` - "Auth is currently a dev-only stub"), auto-provisioning that user on first
-use. To test cross-user isolation, send a different header value via `curl` or by editing
-`frontend/src/api/client.ts`'s `DEV_USER_ID` constant temporarily.
+Real local email/password auth: `/register` and `/login` pages issue a JWT that the frontend
+stores in `localStorage` (`greenthumb.authToken`) and sends as `Authorization: Bearer <token>`.
+Every other route is gated behind `ProtectedRoute` and redirects to `/login` without a valid
+token. `verify.mjs` registers a fresh random-email user via the UI at the start of its run and
+reuses that account's token (read back out of `localStorage`) for its API cleanup calls. To test
+cross-user isolation, register a second account (a fresh `page.context()` avoids sharing
+`localStorage`) and confirm it sees an empty dashboard.
 
 ## Drive it
 

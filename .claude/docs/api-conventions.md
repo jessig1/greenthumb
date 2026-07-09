@@ -6,11 +6,11 @@ spec: run the backend and open `http://localhost:8080/swagger-ui.html`.
 
 ## Base path and auth
 
-All endpoints are under `/api/v1`. Every request must carry `X-Dev-User-Id: <any string>` (the dev
-auth stub - see root `CLAUDE.md`); omitting it falls back to a fixed default user. There's no
-`Authorization` header yet. When Cognito is wired up, this becomes a standard
-`Authorization: Bearer <JWT>` header instead - see the "Auth is currently a dev-only stub" note in
-the root `CLAUDE.md` for what that migration touches.
+All endpoints are under `/api/v1`. Every endpoint except `/api/v1/auth/register` and
+`/api/v1/auth/login` requires `Authorization: Bearer <JWT>`, obtained by registering or logging in
+(see root `CLAUDE.md`'s "Auth is real, but local" note). Missing/invalid tokens get a `401` in the
+same flat error shape used elsewhere. When Cognito is wired up later, the token issuer changes but
+this header contract doesn't.
 
 ## Resource routing
 
@@ -27,6 +27,8 @@ GET/PUT/DEL  /api/v1/plantings/{id}
 GET          /api/v1/plants                (?category= filter; read-only catalog)
 GET          /api/v1/plants/{id}
 GET          /api/v1/me
+POST         /api/v1/auth/register         (public - no token required)
+POST         /api/v1/auth/login            (public - no token required)
 ```
 
 New resources should follow this same pattern: list/create under the parent's path, get/update/

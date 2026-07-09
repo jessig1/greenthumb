@@ -1,9 +1,15 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
 
-// TEMPORARY: mirrors the backend's dev-only header-based user resolution (DevUserResolutionFilter).
-// Replace with a real Cognito access token once a User Pool exists - only this header attachment
-// needs to change; every feature's API calls already go through this one client.
-const DEV_USER_ID = 'local-dev-user'
+let authToken: string | null = null
+let unauthorizedHandler: (() => void) | null = null
+
+export function setAuthToken(token: string | null) {
+  authToken = token
+}
+
+export function setUnauthorizedHandler(handler: (() => void) | null) {
+  unauthorizedHandler = handler
+}
 
 export class ApiError extends Error {
   status: number
@@ -20,10 +26,14 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      'X-Dev-User-Id': DEV_USER_ID,
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
       ...options.headers,
     },
   })
+
+  if (response.status === 401) {
+    unauthorizedHandler?.()
+  }
 
   if (!response.ok) {
     const body = await response.json().catch(() => null)

@@ -27,7 +27,7 @@ export function GardenDetailPage() {
     deleteGarden.mutate(garden.id, {
       onSuccess: () => {
         toast.success('Garden deleted')
-        navigate('/gardens')
+        navigate('/dashboard')
       },
       onError: (error) => toast.error(error.message),
     })

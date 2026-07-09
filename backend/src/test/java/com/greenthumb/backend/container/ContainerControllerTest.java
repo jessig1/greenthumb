@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import tools.jackson.databind.ObjectMapper;
+import com.greenthumb.backend.AuthTestSupport;
 import com.greenthumb.backend.TestcontainersConfiguration;
 import com.greenthumb.backend.container.dto.CreateContainerRequest;
 import com.greenthumb.backend.garden.GardenType;
@@ -35,10 +36,11 @@ class ContainerControllerTest {
 
     @Test
     void createThenListReturnsContainerForGardenOwner() throws Exception {
-        String gardenId = createGarden("alice");
+        String aliceToken = AuthTestSupport.registerAndLogin(mockMvc, objectMapper, "alice");
+        String gardenId = createGarden(aliceToken);
 
         mockMvc.perform(post("/api/v1/gardens/" + gardenId + "/containers")
-                        .header("X-Dev-User-Id", "alice")
+                        .with(AuthTestSupport.bearerToken(aliceToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
                                 new CreateContainerRequest("Raised Bed #1", ContainerType.RAISED_BED, "4x8 ft"))))
@@ -46,25 +48,29 @@ class ContainerControllerTest {
                 .andExpect(jsonPath("$.name", is("Raised Bed #1")))
                 .andExpect(jsonPath("$.gardenId", is(gardenId)));
 
-        mockMvc.perform(get("/api/v1/gardens/" + gardenId + "/containers").header("X-Dev-User-Id", "alice"))
+        mockMvc.perform(get("/api/v1/gardens/" + gardenId + "/containers").with(AuthTestSupport.bearerToken(aliceToken)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].name", is("Raised Bed #1")));
     }
 
     @Test
     void otherUserCannotListContainersOfSomeoneElsesGarden() throws Exception {
-        String gardenId = createGarden("alice");
+        String aliceToken = AuthTestSupport.registerAndLogin(mockMvc, objectMapper, "alice");
+        String bobToken = AuthTestSupport.registerAndLogin(mockMvc, objectMapper, "bob");
+        String gardenId = createGarden(aliceToken);
 
-        mockMvc.perform(get("/api/v1/gardens/" + gardenId + "/containers").header("X-Dev-User-Id", "bob"))
+        mockMvc.perform(get("/api/v1/gardens/" + gardenId + "/containers").with(AuthTestSupport.bearerToken(bobToken)))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     void otherUserCannotCreateContainerInSomeoneElsesGarden() throws Exception {
-        String gardenId = createGarden("alice");
+        String aliceToken = AuthTestSupport.registerAndLogin(mockMvc, objectMapper, "alice");
+        String bobToken = AuthTestSupport.registerAndLogin(mockMvc, objectMapper, "bob");
+        String gardenId = createGarden(aliceToken);
 
         mockMvc.perform(post("/api/v1/gardens/" + gardenId + "/containers")
-                        .header("X-Dev-User-Id", "bob")
+                        .with(AuthTestSupport.bearerToken(bobToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
                                 new CreateContainerRequest("Intruding Pot", ContainerType.POT, null))))
@@ -73,22 +79,24 @@ class ContainerControllerTest {
 
     @Test
     void otherUserCannotReadOrDeleteContainerOfSomeoneElsesGarden() throws Exception {
-        String gardenId = createGarden("alice");
-        String containerId = createContainer("alice", gardenId);
+        String aliceToken = AuthTestSupport.registerAndLogin(mockMvc, objectMapper, "alice");
+        String bobToken = AuthTestSupport.registerAndLogin(mockMvc, objectMapper, "bob");
+        String gardenId = createGarden(aliceToken);
+        String containerId = createContainer(aliceToken, gardenId);
 
-        mockMvc.perform(get("/api/v1/containers/" + containerId).header("X-Dev-User-Id", "bob"))
+        mockMvc.perform(get("/api/v1/containers/" + containerId).with(AuthTestSupport.bearerToken(bobToken)))
                 .andExpect(status().isNotFound());
 
-        mockMvc.perform(delete("/api/v1/containers/" + containerId).header("X-Dev-User-Id", "bob"))
+        mockMvc.perform(delete("/api/v1/containers/" + containerId).with(AuthTestSupport.bearerToken(bobToken)))
                 .andExpect(status().isNotFound());
 
-        mockMvc.perform(get("/api/v1/containers/" + containerId).header("X-Dev-User-Id", "alice"))
+        mockMvc.perform(get("/api/v1/containers/" + containerId).with(AuthTestSupport.bearerToken(aliceToken)))
                 .andExpect(status().isOk());
     }
 
-    private String createGarden(String user) throws Exception {
+    private String createGarden(String token) throws Exception {
         String response = mockMvc.perform(post("/api/v1/gardens")
-                        .header("X-Dev-User-Id", user)
+                        .with(AuthTestSupport.bearerToken(token))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
                                 new CreateGardenRequest("Garden", GardenType.OUTDOOR, null))))
@@ -99,9 +107,9 @@ class ContainerControllerTest {
         return objectMapper.readTree(response).get("id").asText();
     }
 
-    private String createContainer(String user, String gardenId) throws Exception {
+    private String createContainer(String token, String gardenId) throws Exception {
         String response = mockMvc.perform(post("/api/v1/gardens/" + gardenId + "/containers")
-                        .header("X-Dev-User-Id", user)
+                        .with(AuthTestSupport.bearerToken(token))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
                                 new CreateContainerRequest("Container", ContainerType.POT, null))))

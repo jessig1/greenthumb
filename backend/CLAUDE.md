@@ -7,11 +7,14 @@ follows, and the gotchas specific to this stack.
 
 ## Package layout
 
-Package-by-domain, not package-by-layer: `user`, `garden`, `container`, `plant`, `planting`,
-`common`. Each domain package holds its own `Entity`, `EnumType`s, `Repository`, `Service`,
-`Controller`, and a `dto/` subpackage of request/response records. `common` holds cross-cutting
-pieces: `SecurityConfig`, the dev-auth filter (`common/auth/`), and shared web infra
-(`common/web/`: `NotFoundException`, `InvalidRequestException`, `GlobalExceptionHandler`).
+Package-by-domain, not package-by-layer: `user`, `auth`, `garden`, `container`, `plant`,
+`planting`, `common`. Each domain package holds its own `Entity`, `EnumType`s, `Repository`,
+`Service`, `Controller`, and a `dto/` subpackage of request/response records. `auth` holds the
+register/login business logic (`AuthController`/`AuthService`); `common` holds cross-cutting
+pieces: `SecurityConfig`, the JWT issuing/validation filter (`common/auth/`: `JwtService`,
+`JwtAuthenticationFilter`, `CurrentUserContext`), and shared web infra (`common/web/`:
+`NotFoundException`, `InvalidRequestException`, `UnauthorizedException`, `GlobalExceptionHandler`,
+`ApiAuthenticationEntryPoint`).
 
 ## The standard module shape
 
@@ -70,9 +73,10 @@ JUnit 5 + Testcontainers (real Postgres in Docker, via `@Import(TestcontainersCo
 + `@SpringBootTest`) + MockMvc. Controller tests use `@Transactional` for automatic per-test
 rollback/isolation.
 
-**Cross-user isolation pattern**: send different `X-Dev-User-Id` header values to simulate distinct
-users in the same test class (see `GardenControllerTest.oneUserCannotReadAnotherUsersGarden` for the
-pattern) - no need for real Cognito users to test this.
+**Cross-user isolation pattern**: register two distinct users via `AuthTestSupport.registerAndLogin`
+and attach each one's JWT with `AuthTestSupport.bearerToken(token)` to simulate distinct users in
+the same test class (see `GardenControllerTest.oneUserCannotReadAnotherUsersGarden` for the
+pattern).
 
 **Known gap in this testing setup - `@Transactional` can mask `LazyInitializationException`.**
 `@Transactional` on the test class keeps one Hibernate session open for the *entire* test method,

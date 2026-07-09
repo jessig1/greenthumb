@@ -31,8 +31,8 @@ start: ## Start the Spring Boot backend in the background (:8080)
 		&& echo "backend up: http://localhost:8080" \
 		|| (echo "backend failed to start - check $(LOG_DIR)/backend.log" && exit 1)
 
-stop: ## Stop the backend
-	@$(POWERSHELL) -NoProfile -ExecutionPolicy Bypass -File $(SCRIPTS)/stop-process.ps1 -ProcessName java.exe -CommandLineMatch backend
+stop: ## Stop the backend (and free :8080 if anything's still bound to it)
+	@$(POWERSHELL) -NoProfile -ExecutionPolicy Bypass -File $(SCRIPTS)/stop-process.ps1 -ProcessName java.exe -CommandLineMatch backend -Port 8080
 
 restart: stop start ## Restart the backend
 

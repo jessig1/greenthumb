@@ -46,8 +46,8 @@ start: ## Start the Vite dev server in the background (:5173)
 		&& echo "frontend up: http://localhost:5173" \
 		|| (echo "frontend failed to start - check $(LOG_DIR)/frontend.log" && exit 1)
 
-stop: ## Stop the frontend dev server
-	@$(POWERSHELL) -NoProfile -ExecutionPolicy Bypass -File $(SCRIPTS)/stop-process.ps1 -ProcessName node.exe -CommandLineMatch vite
+stop: ## Stop the frontend dev server (and free :5173 if anything's still bound to it)
+	@$(POWERSHELL) -NoProfile -ExecutionPolicy Bypass -File $(SCRIPTS)/stop-process.ps1 -ProcessName node.exe -CommandLineMatch vite -Port 5173
 
 restart: stop start ## Restart the frontend
 

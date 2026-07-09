@@ -17,14 +17,17 @@ public class AppUser {
     @GeneratedValue
     private UUID id;
 
-    @Column(name = "cognito_sub", nullable = false, unique = true)
+    @Column(name = "cognito_sub", unique = true)
     private String cognitoSub;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String email;
 
     @Column(name = "display_name")
     private String displayName;
+
+    @Column(name = "password_hash")
+    private String passwordHash;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -34,10 +37,11 @@ public class AppUser {
         // for JPA
     }
 
-    public AppUser(String cognitoSub, String email, String displayName) {
+    public AppUser(String cognitoSub, String email, String displayName, String passwordHash) {
         this.cognitoSub = cognitoSub;
         this.email = email;
         this.displayName = displayName;
+        this.passwordHash = passwordHash;
     }
 
     public UUID getId() {
@@ -54,6 +58,10 @@ public class AppUser {
 
     public String getDisplayName() {
         return displayName;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
     }
 
     public Instant getCreatedAt() {

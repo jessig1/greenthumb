@@ -76,15 +76,19 @@ frontend. API docs at `http://localhost:8080/swagger-ui.html` once the backend i
 
 ## Conventions that span both stacks
 
-- **Auth is currently a dev-only stub, not real Cognito.** `DevUserResolutionFilter`
-  (`backend/.../common/auth/`) resolves the caller from an `X-Dev-User-Id` header (default
-  `local-dev-user`), auto-provisioning an `AppUser` exactly like the future Cognito-JWT-based
-  resolver will from a token's `sub`/`email` claims. `SecurityConfig` currently `permitAll()`s
-  everything. The frontend's `api/client.ts` sends the same fixed header on every request — there's
-  no login screen yet. To simulate a second user locally, send a different `X-Dev-User-Id`. When
-  Cognito exists: replace the filter + `SecurityConfig` with real JWT validation and add the
-  frontend Hosted-UI/PKCE flow; the service layer's ownership logic (`backend/CLAUDE.md`) doesn't
-  need to change.
+- **Auth is real, but local (not Cognito yet).** Users register/log in with email + password;
+  `AuthController`/`AuthService` (`backend/.../auth/`) hash the password (BCrypt) and issue a
+  self-signed HS256 JWT (`JwtService`, `backend/.../common/auth/`). `JwtAuthenticationFilter`
+  validates the `Authorization: Bearer <token>` header on every other request and populates
+  `CurrentUserContext`, same seam the future Cognito resolver will use. `SecurityConfig` requires
+  authentication on everything except `/api/v1/auth/register`, `/api/v1/auth/login`, and swagger.
+  The frontend stores the token in `localStorage` (`greenthumb.authToken`) via
+  `features/auth/AuthContext.tsx` and every route except `/login`/`/register` is gated behind
+  `ProtectedRoute`. When Cognito exists: replace `JwtService`/`JwtAuthenticationFilter` +
+  `SecurityConfig` with real JWT validation and swap the frontend's login/register pages for the
+  Hosted-UI/PKCE flow (the already-installed but unused `oidc-client-ts`/`react-oidc-context` deps
+  were added in anticipation of this); the service layer's ownership logic (`backend/CLAUDE.md`)
+  doesn't need to change.
 - **Cost guardrail**: never add a NAT Gateway to the Terraform without flagging it first — at
   ~$32/month it would roughly triple this project's AWS bill. App Runner's VPC Connector reaches
   Aurora privately without needing one.
@@ -115,10 +119,10 @@ knowing before assuming a tool is misbehaving:
 ## Status / roadmap
 
 Phase 1 MVP backend and frontend are built and verified end-to-end (migrations, all CRUD
-endpoints with ownership enforcement, and the full garden → container → planting UI flow,
-including the plant catalog/care-guide screens). Not yet done: any AWS deployment — no Cognito
-pool, Aurora instance, or other cloud resources exist yet, and real auth isn't wired up (see the
-dev-stub note above).
+endpoints with ownership enforcement, local email/password registration/login with a dashboard of
+the user's gardens, and the full garden → container → planting UI flow, including the plant
+catalog/care-guide screens). Not yet done: any AWS deployment — no Cognito pool, Aurora instance,
+or other cloud resources exist yet (see the auth note above for the local-vs-Cognito distinction).
 
 Planned next: cloud deployment → photo uploads → calendar/reminders + AI garden planning/diagnosis
 (via Bedrock). The data model and infra choices were made so the calendar and AI features can be

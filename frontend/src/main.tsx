@@ -5,14 +5,17 @@ import { RouterProvider } from 'react-router/dom'
 import './index.css'
 import { router } from '@/routes'
 import { Toaster } from '@/components/ui/sonner'
+import { AuthProvider } from '@/features/auth/AuthContext'
 
 const queryClient = new QueryClient()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-      <Toaster />
+      <AuthProvider>
+        <RouterProvider router={router} />
+        <Toaster />
+      </AuthProvider>
     </QueryClientProvider>
   </StrictMode>,
 )
