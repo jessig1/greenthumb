@@ -1,7 +1,6 @@
 import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import type { PlantedPlantResponse, PlantingStatus } from '@/api/types'
-import { usePlants } from '@/features/plants/api'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -9,17 +8,16 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { plantingStatusLabel } from '@/lib/labels'
-import { useCreatePlanting, useUpdatePlanting } from './api'
+import { useUpdatePlanting } from './api'
 
 interface PlantingFormDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   containerId: string
-  planting?: PlantedPlantResponse
+  planting: PlantedPlantResponse
 }
 
 interface FormValues {
-  plantId: string
   nickname: string
   quantity: number
   plannedDate: string
@@ -31,36 +29,21 @@ interface FormValues {
 const STATUSES: PlantingStatus[] = ['PLANNED', 'PLANTED', 'HARVESTED', 'REMOVED']
 
 export function PlantingFormDialog({ open, onOpenChange, containerId, planting }: PlantingFormDialogProps) {
-  const isEditing = !!planting
-  const { data: plants } = usePlants()
   const { register, control, handleSubmit, watch, reset } = useForm<FormValues>({
-    defaultValues: planting
-      ? {
-          plantId: planting.plant.id,
-          nickname: planting.nickname ?? '',
-          quantity: planting.quantity,
-          plannedDate: planting.plannedDate ?? '',
-          plantedDate: planting.plantedDate ?? '',
-          status: planting.status,
-          notes: planting.notes ?? '',
-        }
-      : {
-          plantId: '',
-          nickname: '',
-          quantity: 1,
-          plannedDate: '',
-          plantedDate: '',
-          status: 'PLANNED',
-          notes: '',
-        },
+    defaultValues: {
+      nickname: planting.nickname ?? '',
+      quantity: planting.quantity,
+      plannedDate: planting.plannedDate ?? '',
+      plantedDate: planting.plantedDate ?? '',
+      status: planting.status,
+      notes: planting.notes ?? '',
+    },
   })
 
   const status = watch('status')
   const plantedDateRequired = status !== 'PLANNED'
 
-  const createPlanting = useCreatePlanting(containerId)
-  const updatePlanting = useUpdatePlanting(planting?.id ?? '', containerId)
-  const mutation = isEditing ? updatePlanting : createPlanting
+  const updatePlanting = useUpdatePlanting(planting.id, containerId)
 
   const onSubmit = (data: FormValues) => {
     const payload = {
@@ -72,13 +55,10 @@ export function PlantingFormDialog({ open, onOpenChange, containerId, planting }
       notes: data.notes || null,
     }
 
-    const mutate = isEditing
-      ? () => updatePlanting.mutateAsync(payload)
-      : () => createPlanting.mutateAsync({ ...payload, plantId: data.plantId })
-
-    mutate()
+    updatePlanting
+      .mutateAsync(payload)
       .then(() => {
-        toast.success(isEditing ? 'Planting updated' : 'Planting added')
+        toast.success('Planting updated')
         onOpenChange(false)
         reset()
       })
@@ -95,38 +75,13 @@ export function PlantingFormDialog({ open, onOpenChange, containerId, planting }
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEditing ? 'Edit planting' : 'Plan a planting'}</DialogTitle>
+          <DialogTitle>Edit planting</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-          {isEditing ? (
-            <div className="flex flex-col gap-2">
-              <Label>Plant</Label>
-              <p className="font-medium">{planting.plant.commonName}</p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              <Label>Plant</Label>
-              <Controller
-                control={control}
-                name="plantId"
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose a plant" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {plants?.map((plant) => (
-                        <SelectItem key={plant.id} value={plant.id}>
-                          {plant.commonName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </div>
-          )}
+          <div className="flex flex-col gap-2">
+            <Label>Plant</Label>
+            <p className="font-medium">{planting.plant.commonName}</p>
+          </div>
 
           <div className="flex flex-col gap-2">
             <Label htmlFor="nickname">Nickname</Label>
@@ -187,8 +142,8 @@ export function PlantingFormDialog({ open, onOpenChange, containerId, planting }
           </div>
 
           <DialogFooter>
-            <Button type="submit" disabled={mutation.isPending}>
-              {isEditing ? 'Save' : 'Add'}
+            <Button type="submit" disabled={updatePlanting.isPending}>
+              Save
             </Button>
           </DialogFooter>
         </form>

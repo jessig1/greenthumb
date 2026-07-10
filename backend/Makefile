@@ -25,11 +25,28 @@ help: ## Show this help
 
 start: ## Start the Spring Boot backend in the background (:8080)
 	@mkdir -p $(LOG_DIR);
-	@(./mvnw -q spring-boot:run > $(LOG_DIR)/backend.log 2>&1 &)
-	@echo "waiting for backend to start..."
-	@sh -c 'i=0; until $(CURL) -sf http://localhost:8080/v3/api-docs >/dev/null 2>&1; do i=$$((i+1)); [ $$i -ge 60 ] && exit 1; sleep 1; done' \
-		&& echo "backend up: http://localhost:8080" \
-		|| (echo "backend failed to start - check $(LOG_DIR)/backend.log" && exit 1)
+	@sh -c ' \
+		if $(CURL) -sf http://localhost:8080/v3/api-docs >/dev/null 2>&1; then \
+			echo "backend already up: http://localhost:8080"; exit 0; \
+		fi; \
+		: > $(LOG_DIR)/backend.log; \
+		(./mvnw -q spring-boot:run >> $(LOG_DIR)/backend.log 2>&1 &); \
+		echo "waiting for backend to start (streaming $(LOG_DIR)/backend.log - a cold build can take a couple minutes)..."; \
+		tail -n +1 -f $(LOG_DIR)/backend.log & \
+		tailpid=$$!; \
+		i=0; \
+		until $(CURL) -sf http://localhost:8080/v3/api-docs >/dev/null 2>&1; do \
+			i=$$((i+1)); \
+			if [ $$i -ge 180 ]; then \
+				kill $$tailpid 2>/dev/null; \
+				echo "backend failed to start within 180s - see $(LOG_DIR)/backend.log"; \
+				exit 1; \
+			fi; \
+			sleep 1; \
+		done; \
+		kill $$tailpid 2>/dev/null; \
+		echo "backend up: http://localhost:8080" \
+	'
 
 stop: ## Stop the backend (and free :8080 if anything's still bound to it)
 	@$(POWERSHELL) -NoProfile -ExecutionPolicy Bypass -File $(SCRIPTS)/stop-process.ps1 -ProcessName java.exe -CommandLineMatch backend -Port 8080
@@ -52,10 +69,22 @@ restart: stop start ## Restart the backend
 # redirect/pipe/&&/parens don't need it.
 #
 # `start`'s startup-wait loop deliberately avoids the external "timeout" command (implementing
-# the 60s bound as a plain counter inside the sh -c loop instead): Windows ships its own
+# the 180s bound as a plain counter inside the sh -c loop instead): Windows ships its own
 # System32\timeout.exe - a completely different, incompatible program (just "pause N seconds",
 # can't run a command) - and it sits earlier on PATH than Git's coreutils timeout.exe even once
-# usr/bin is added, so plain "timeout 60 ..." resolves to the wrong one and fails confusingly.
+# usr/bin is added, so plain "timeout 180 ..." resolves to the wrong one and fails confusingly.
+#
+# The 180s bound (and streaming backend.log to the console while waiting) is deliberately
+# generous/visible: `spring-boot:run` recompiles from source and boots a full Spring context every
+# time (19s+ for context init alone, on top of whatever Maven's compile step takes), which can
+# comfortably blow past a tight timeout on a cold build - especially if this is ever invoked from
+# inside WSL against a project directory that lives on the Windows filesystem (/mnt/c/...), where
+# every file read during compilation crosses the slow 9p/virtiofs boundary. Without the streamed
+# log, a slow-but-successful start and a hard crash both look identical from the outside (silent
+# wait, then a generic failure message) - streaming makes the real state visible immediately
+# instead of only after the timeout gives up. The `already up` short-circuit at the top makes
+# `start` idempotent, so re-running `make up` after a slow start doesn't race a second mvnw
+# instance against the first one's port bind.
 
 test: ## Run backend tests (needs Docker Desktop running, for Testcontainers)
 	./mvnw test;

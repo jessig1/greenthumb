@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { useGardens } from './api'
-import { GardenFormDialog } from './GardenFormDialog'
+import { NewGardenWizardDialog } from './NewGardenWizardDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -49,7 +49,7 @@ export function GardensListPage() {
         </div>
       )}
 
-      <GardenFormDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <NewGardenWizardDialog open={createOpen} onOpenChange={setCreateOpen} />
     </div>
   )
 }

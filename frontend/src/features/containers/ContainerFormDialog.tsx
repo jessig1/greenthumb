@@ -1,4 +1,5 @@
 import { Controller, useForm } from 'react-hook-form'
+import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import type { ContainerResponse, ContainerType, CreateContainerRequest } from '@/api/types'
 import { Button } from '@/components/ui/button'
@@ -21,6 +22,7 @@ const CONTAINER_TYPES: ContainerType[] = ['RAISED_BED', 'POT', 'IN_GROUND', 'WIN
 
 export function ContainerFormDialog({ open, onOpenChange, gardenId, container }: ContainerFormDialogProps) {
   const isEditing = !!container
+  const navigate = useNavigate()
   const { register, control, handleSubmit, reset } = useForm<CreateContainerRequest>({
     defaultValues: container
       ? { name: container.name, containerType: container.containerType, sizeDescription: container.sizeDescription }
@@ -33,10 +35,13 @@ export function ContainerFormDialog({ open, onOpenChange, gardenId, container }:
 
   const onSubmit = (data: CreateContainerRequest) => {
     mutation.mutate(data, {
-      onSuccess: () => {
+      onSuccess: (result) => {
         toast.success(isEditing ? 'Container updated' : 'Container added')
         onOpenChange(false)
         reset()
+        if (!isEditing) {
+          navigate(`/gardens/${gardenId}/containers/${result.id}`)
+        }
       },
       onError: (error) => toast.error(error.message),
     })

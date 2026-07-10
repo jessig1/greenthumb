@@ -1,4 +1,5 @@
 import { Controller, useForm } from 'react-hook-form'
+import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import type { CreateGardenRequest, GardenResponse, GardenType } from '@/api/types'
 import { Button } from '@/components/ui/button'
@@ -26,6 +27,7 @@ const GARDEN_TYPES: GardenType[] = ['INDOOR', 'OUTDOOR']
 
 export function GardenFormDialog({ open, onOpenChange, garden }: GardenFormDialogProps) {
   const isEditing = !!garden
+  const navigate = useNavigate()
   const { register, control, handleSubmit, reset } = useForm<CreateGardenRequest>({
     defaultValues: garden
       ? { name: garden.name, type: garden.type, description: garden.description }
@@ -38,10 +40,13 @@ export function GardenFormDialog({ open, onOpenChange, garden }: GardenFormDialo
 
   const onSubmit = (data: CreateGardenRequest) => {
     mutation.mutate(data, {
-      onSuccess: () => {
+      onSuccess: (result) => {
         toast.success(isEditing ? 'Garden updated' : 'Garden created')
         onOpenChange(false)
         reset()
+        if (!isEditing) {
+          navigate(`/gardens/${result.id}`)
+        }
       },
       onError: (error) => toast.error(error.message),
     })

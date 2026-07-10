@@ -40,11 +40,28 @@ help: ## Show this help
 # the interpreter based on environment rather than hardcoding either name.
 start: ## Start the Vite dev server in the background (:5173)
 	@mkdir -p $(LOG_DIR);
-	@($(NPM) run dev > $(LOG_DIR)/frontend.log 2>&1 &)
-	@echo "waiting for frontend to start..."
-	@sh -c 'i=0; until $(CURL) -sf http://localhost:5173 >/dev/null 2>&1; do i=$$((i+1)); [ $$i -ge 30 ] && exit 1; sleep 1; done' \
-		&& echo "frontend up: http://localhost:5173" \
-		|| (echo "frontend failed to start - check $(LOG_DIR)/frontend.log" && exit 1)
+	@sh -c ' \
+		if $(CURL) -sf http://localhost:5173 >/dev/null 2>&1; then \
+			echo "frontend already up: http://localhost:5173"; exit 0; \
+		fi; \
+		: > $(LOG_DIR)/frontend.log; \
+		($(NPM) run dev >> $(LOG_DIR)/frontend.log 2>&1 &); \
+		echo "waiting for frontend to start (streaming $(LOG_DIR)/frontend.log)..."; \
+		tail -n +1 -f $(LOG_DIR)/frontend.log & \
+		tailpid=$$!; \
+		i=0; \
+		until $(CURL) -sf http://localhost:5173 >/dev/null 2>&1; do \
+			i=$$((i+1)); \
+			if [ $$i -ge 60 ]; then \
+				kill $$tailpid 2>/dev/null; \
+				echo "frontend failed to start within 60s - see $(LOG_DIR)/frontend.log"; \
+				exit 1; \
+			fi; \
+			sleep 1; \
+		done; \
+		kill $$tailpid 2>/dev/null; \
+		echo "frontend up: http://localhost:5173" \
+	'
 
 stop: ## Stop the frontend dev server (and free :5173 if anything's still bound to it)
 	@$(POWERSHELL) -NoProfile -ExecutionPolicy Bypass -File $(SCRIPTS)/stop-process.ps1 -ProcessName node.exe -CommandLineMatch vite -Port 5173

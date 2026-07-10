@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { useContainer, useDeleteContainer } from './api'
 import { ContainerFormDialog } from './ContainerFormDialog'
 import { useDeletePlanting, usePlantings } from '@/features/plantings/api'
+import { AddPlantsDialog } from '@/features/plantings/AddPlantsDialog'
 import { PlantingFormDialog } from '@/features/plantings/PlantingFormDialog'
 import type { PlantedPlantResponse } from '@/api/types'
 import { Badge } from '@/components/ui/badge'
@@ -21,7 +22,7 @@ export function ContainerDetailPage() {
   const deletePlanting = useDeletePlanting(containerId!)
 
   const [editContainerOpen, setEditContainerOpen] = useState(false)
-  const [createPlantingOpen, setCreatePlantingOpen] = useState(false)
+  const [addPlantsOpen, setAddPlantsOpen] = useState(false)
   const [editingPlanting, setEditingPlanting] = useState<PlantedPlantResponse | null>(null)
 
   const handleDeleteContainer = () => {
@@ -80,7 +81,7 @@ export function ContainerDetailPage() {
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-medium">Plantings</h2>
-          <Button onClick={() => setCreatePlantingOpen(true)}>Plan a planting</Button>
+          <Button onClick={() => setAddPlantsOpen(true)}>Add Plants</Button>
         </div>
 
         {plantingsLoading ? (
@@ -126,7 +127,7 @@ export function ContainerDetailPage() {
         gardenId={gardenId!}
         container={container}
       />
-      <PlantingFormDialog open={createPlantingOpen} onOpenChange={setCreatePlantingOpen} containerId={containerId!} />
+      <AddPlantsDialog open={addPlantsOpen} onOpenChange={setAddPlantsOpen} containerId={containerId!} />
       {editingPlanting && (
         <PlantingFormDialog
           open={!!editingPlanting}

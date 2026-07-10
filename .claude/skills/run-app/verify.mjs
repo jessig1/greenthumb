@@ -76,31 +76,41 @@ async function main() {
     await page.waitForSelector('text=Harvest guide');
     await shot('02-plant-detail');
 
-    console.log('--- create garden -> container -> planting ---');
+    console.log('--- create garden -> container -> planting (all-in-one wizard) ---');
     await page.goto(`${FRONTEND_URL}/gardens`, { waitUntil: 'networkidle' });
     await page.click('button:has-text("New garden")');
     await page.waitForSelector('#name');
     await page.fill('#name', TEST_GARDEN_NAME);
-    await page.click('button[type="submit"]:has-text("Create")');
-    await page.waitForSelector('text=Garden created', { timeout: 10000 });
+    await page.click('button:has-text("Next")');
 
-    await page.click(`a:has-text("${TEST_GARDEN_NAME}")`);
-    await page.waitForSelector('h1:has-text("' + TEST_GARDEN_NAME + '")');
-    await page.click('button:has-text("New container")');
-    await page.waitForSelector('#name');
-    await page.fill('#name', 'Test Bed');
-    await page.click('button[type="submit"]:has-text("Add")');
-    await page.waitForSelector('text=Container added', { timeout: 10000 });
+    // Garden creation is a 4-step wizard (garden -> containers -> plants -> review); nothing is
+    // persisted until "Create garden" on the final step.
+    await page.waitForSelector('#containerName', { timeout: 10000 });
+    await page.fill('#containerName', 'Test Bed');
+    await page.click('button:has-text("Add container")');
+    await page.waitForSelector('text=Test Bed');
+    await page.click('button:has-text("Next")');
 
-    await page.click('a:has-text("Test Bed")');
-    await page.waitForSelector('h1:has-text("Test Bed")');
-    await page.click('button:has-text("Plan a planting")');
-    await page.waitForSelector('text=Choose a plant');
+    await page.waitForSelector('text=Choose a plant', { timeout: 10000 });
     await page.click('text=Choose a plant');
     await page.click('[role="option"]:has-text("Tomato")');
-    await page.click('button[type="submit"]:has-text("Add")');
-    await page.waitForSelector('text=Planting added', { timeout: 10000 });
-    await page.waitForTimeout(300); // let the dialog-close animation finish before the shot
+    await page.click('button:has-text("Add plant")');
+    await page.waitForSelector('text=1x Tomato', { timeout: 10000 });
+
+    await page.click('button:has-text("Next")');
+    await page.waitForSelector('button:has-text("Create garden")', { timeout: 10000 });
+    await shot('02b-wizard-review-step');
+
+    await page.click('button:has-text("Create garden")');
+    await page.waitForSelector('text=Garden created', { timeout: 10000 });
+    await page.waitForSelector('h1:has-text("' + TEST_GARDEN_NAME + '")', { timeout: 10000 });
+    await shot('02c-garden-detail-after-create');
+
+    // Creating a garden navigates straight to its detail page, and the container/planting were
+    // created as part of the same wizard submission - just confirm they landed.
+    await page.click('a:has-text("Test Bed")');
+    await page.waitForSelector('h1:has-text("Test Bed")', { timeout: 10000 });
+    await page.waitForTimeout(300); // let the navigation animation finish before the shot
     await shot('03-planting-added');
 
     const bodyText = await page.evaluate(() => document.body.innerText);
