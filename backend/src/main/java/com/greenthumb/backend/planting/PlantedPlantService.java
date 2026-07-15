@@ -7,7 +7,9 @@ import com.greenthumb.backend.container.ContainerService;
 import com.greenthumb.backend.plant.Plant;
 import com.greenthumb.backend.plant.PlantRepository;
 import com.greenthumb.backend.planting.dto.CreatePlantedPlantRequest;
+import com.greenthumb.backend.planting.dto.QuickAddPlantingRequest;
 import com.greenthumb.backend.planting.dto.UpdatePlantedPlantRequest;
+import com.greenthumb.backend.user.AppUserRepository;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -21,25 +23,32 @@ public class PlantedPlantService {
     private final PlantedPlantRepository plantedPlantRepository;
     private final ContainerService containerService;
     private final PlantRepository plantRepository;
+    private final AppUserRepository appUserRepository;
 
     public PlantedPlantService(
             PlantedPlantRepository plantedPlantRepository,
             ContainerService containerService,
-            PlantRepository plantRepository) {
+            PlantRepository plantRepository,
+            AppUserRepository appUserRepository) {
         this.plantedPlantRepository = plantedPlantRepository;
         this.containerService = containerService;
         this.plantRepository = plantRepository;
+        this.appUserRepository = appUserRepository;
     }
 
     public List<PlantedPlant> findAllForContainer(UUID containerId, UUID ownerId) {
         containerService.getForOwner(containerId, ownerId); // ensures the container is owned by the caller
-        return plantedPlantRepository.findByContainer_IdAndContainer_Garden_Owner_IdOrderByCreatedAtDesc(
-                containerId, ownerId);
+        return plantedPlantRepository.findByContainer_IdAndOwner_IdOrderByCreatedAtDesc(containerId, ownerId);
     }
 
-    /** Throws {@link NotFoundException} if the planting doesn't exist OR its container's garden belongs to someone else. */
+    /** Every planting the caller owns, assigned to a container or not - backs the dashboard inventory. */
+    public List<PlantedPlant> findAllForOwner(UUID ownerId) {
+        return plantedPlantRepository.findByOwner_IdOrderByCreatedAtDesc(ownerId);
+    }
+
+    /** Throws {@link NotFoundException} if the planting doesn't exist OR belongs to someone else. */
     public PlantedPlant getForOwner(UUID plantedPlantId, UUID ownerId) {
-        return plantedPlantRepository.findByIdAndContainer_Garden_Owner_Id(plantedPlantId, ownerId)
+        return plantedPlantRepository.findByIdAndOwner_Id(plantedPlantId, ownerId)
                 .orElseThrow(() -> new NotFoundException("Planting not found: " + plantedPlantId));
     }
 
@@ -53,6 +62,7 @@ public class PlantedPlantService {
         requirePlantedDateWhenPastPlanned(status, request.plantedDate());
 
         PlantedPlant plantedPlant = new PlantedPlant(
+                appUserRepository.getReferenceById(ownerId),
                 container,
                 plant,
                 request.nickname(),
@@ -61,6 +71,33 @@ public class PlantedPlantService {
                 request.plantedDate(),
                 status,
                 request.notes());
+        return plantedPlantRepository.save(plantedPlant);
+    }
+
+    /** Dashboard "quick add": garden/container are optional - a container may be assigned up front via containerId. */
+    @Transactional
+    public PlantedPlant quickAdd(UUID ownerId, QuickAddPlantingRequest request) {
+        Plant plant = plantRepository.findById(request.plantId())
+                .orElseThrow(() -> new NotFoundException("Plant not found: " + request.plantId()));
+        Container container = request.containerId() == null
+                ? null
+                : containerService.getForOwner(request.containerId(), ownerId);
+
+        // The quick-add form doesn't collect a planted date, but the DB requires one once status
+        // moves past PLANNED - default to today rather than asking the user for a field they
+        // weren't meant to need.
+        LocalDate plantedDate = request.status() == PlantingStatus.PLANNED ? null : LocalDate.now();
+
+        PlantedPlant plantedPlant = new PlantedPlant(
+                appUserRepository.getReferenceById(ownerId),
+                container,
+                plant,
+                null,
+                request.quantity(),
+                null,
+                plantedDate,
+                request.status(),
+                null);
         return plantedPlantRepository.save(plantedPlant);
     }
 

@@ -1,10 +1,13 @@
+import { useState } from 'react'
 import { Link, Outlet, useNavigate } from 'react-router'
 import { useAuth } from '@/features/auth/AuthContext'
 import { Button } from '@/components/ui/button'
+import { QuickAddPlantDialog } from '@/features/plantings/QuickAddPlantDialog'
 
 export function AppLayout() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const [addPlantOpen, setAddPlantOpen] = useState(false)
 
   const handleLogout = () => {
     logout()
@@ -27,6 +30,9 @@ export function AppLayout() {
             </Link>
           </nav>
           <div className="ml-auto flex items-center gap-3">
+            <Button size="sm" onClick={() => setAddPlantOpen(true)}>
+              Add plant
+            </Button>
             <span className="text-sm text-muted-foreground">{user?.displayName ?? user?.email}</span>
             <Button variant="ghost" size="sm" onClick={handleLogout}>
               Log out
@@ -37,6 +43,7 @@ export function AppLayout() {
       <main className="mx-auto max-w-4xl px-4 py-6">
         <Outlet />
       </main>
+      <QuickAddPlantDialog open={addPlantOpen} onOpenChange={setAddPlantOpen} />
     </div>
   )
 }

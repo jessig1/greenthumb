@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { useContainer, useDeleteContainer } from './api'
@@ -6,7 +6,7 @@ import { ContainerFormDialog } from './ContainerFormDialog'
 import { useDeletePlanting, usePlantings } from '@/features/plantings/api'
 import { AddPlantsDialog } from '@/features/plantings/AddPlantsDialog'
 import { PlantingFormDialog } from '@/features/plantings/PlantingFormDialog'
-import type { PlantedPlantResponse } from '@/api/types'
+import { groupDuplicatePlantings, type PlantingGroup } from '@/features/plantings/duplicates'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -21,9 +21,11 @@ export function ContainerDetailPage() {
   const deleteContainer = useDeleteContainer(gardenId!)
   const deletePlanting = useDeletePlanting(containerId!)
 
+  const groups = useMemo(() => groupDuplicatePlantings(plantings ?? []), [plantings])
+
   const [editContainerOpen, setEditContainerOpen] = useState(false)
   const [addPlantsOpen, setAddPlantsOpen] = useState(false)
-  const [editingPlanting, setEditingPlanting] = useState<PlantedPlantResponse | null>(null)
+  const [editingGroup, setEditingGroup] = useState<PlantingGroup | null>(null)
 
   const handleDeleteContainer = () => {
     if (!container) return
@@ -37,13 +39,15 @@ export function ContainerDetailPage() {
     })
   }
 
-  const handleDeletePlanting = (planting: PlantedPlantResponse) => {
-    const label = planting.nickname ?? planting.plant.commonName
+  const handleDeleteGroup = (group: PlantingGroup) => {
+    const label = group.representative.nickname ?? group.representative.plant.commonName
     if (!window.confirm(`Remove "${label}" from this container?`)) return
-    deletePlanting.mutate(planting.id, {
-      onSuccess: () => toast.success('Planting removed'),
-      onError: (error) => toast.error(error.message),
-    })
+    for (const planting of group.plantings) {
+      deletePlanting.mutate(planting.id, {
+        onError: (error) => toast.error(error.message),
+      })
+    }
+    toast.success('Planting removed')
   }
 
   if (containerLoading) {
@@ -86,37 +90,42 @@ export function ContainerDetailPage() {
 
         {plantingsLoading ? (
           <Skeleton className="h-24" />
-        ) : plantings?.length === 0 ? (
+        ) : groups.length === 0 ? (
           <p className="text-muted-foreground">Nothing planned here yet.</p>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {plantings?.map((planting) => (
-              <Card key={planting.id}>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between gap-2">
-                    <Link to={`/plants/${planting.plant.id}`} className="hover:underline">
-                      {planting.nickname ?? planting.plant.commonName}
-                    </Link>
-                    <Badge variant="secondary">{plantingStatusLabel(planting.status)}</Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-2 text-sm">
-                  {planting.nickname && <p className="text-muted-foreground">{planting.plant.commonName}</p>}
-                  <p>Quantity: {planting.quantity}</p>
-                  {planting.plannedDate && <p>Planned for: {planting.plannedDate}</p>}
-                  {planting.plantedDate && <p>Planted on: {planting.plantedDate}</p>}
-                  {planting.notes && <p className="text-muted-foreground">{planting.notes}</p>}
-                  <div className="mt-2 flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => setEditingPlanting(planting)}>
-                      Edit
-                    </Button>
-                    <Button size="sm" variant="destructive" onClick={() => handleDeletePlanting(planting)}>
-                      Remove
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            {groups.map((group) => {
+              const { representative } = group
+              return (
+                <Card key={group.key}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between gap-2">
+                      <Link to={`/plants/${representative.plant.id}`} className="hover:underline">
+                        {representative.nickname ?? representative.plant.commonName}
+                      </Link>
+                      <Badge variant="secondary">{plantingStatusLabel(representative.status)}</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex flex-col gap-2 text-sm">
+                    {representative.nickname && (
+                      <p className="text-muted-foreground">{representative.plant.commonName}</p>
+                    )}
+                    <p>Quantity: {group.totalQuantity}</p>
+                    {representative.plannedDate && <p>Planned for: {representative.plannedDate}</p>}
+                    {representative.plantedDate && <p>Planted on: {representative.plantedDate}</p>}
+                    {representative.notes && <p className="text-muted-foreground">{representative.notes}</p>}
+                    <div className="mt-2 flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => setEditingGroup(group)}>
+                        Edit
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => handleDeleteGroup(group)}>
+                        Remove
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
         )}
       </div>
@@ -128,12 +137,19 @@ export function ContainerDetailPage() {
         container={container}
       />
       <AddPlantsDialog open={addPlantsOpen} onOpenChange={setAddPlantsOpen} containerId={containerId!} />
-      {editingPlanting && (
+      {editingGroup && (
         <PlantingFormDialog
-          open={!!editingPlanting}
-          onOpenChange={(open) => !open && setEditingPlanting(null)}
+          open={!!editingGroup}
+          onOpenChange={(open) => !open && setEditingGroup(null)}
           containerId={containerId!}
-          planting={editingPlanting}
+          planting={{ ...editingGroup.representative, quantity: editingGroup.totalQuantity }}
+          onSaved={() => {
+            // The dialog just saved the merged quantity onto the representative row - the other
+            // rows that were folded into this group are now redundant duplicates, so drop them.
+            for (const duplicate of editingGroup.plantings.slice(1)) {
+              deletePlanting.mutate(duplicate.id)
+            }
+          }}
         />
       )}
     </div>

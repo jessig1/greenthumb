@@ -15,6 +15,9 @@ interface PlantingFormDialogProps {
   onOpenChange: (open: boolean) => void
   containerId: string
   planting: PlantedPlantResponse
+  // Fires after a successful save, in addition to the built-in toast/close - lets a caller that
+  // merged several duplicate plantings into this one form clean up the now-redundant rows.
+  onSaved?: () => void
 }
 
 interface FormValues {
@@ -28,7 +31,7 @@ interface FormValues {
 
 const STATUSES: PlantingStatus[] = ['PLANNED', 'PLANTED', 'HARVESTED', 'REMOVED']
 
-export function PlantingFormDialog({ open, onOpenChange, containerId, planting }: PlantingFormDialogProps) {
+export function PlantingFormDialog({ open, onOpenChange, containerId, planting, onSaved }: PlantingFormDialogProps) {
   const { register, control, handleSubmit, watch, reset } = useForm<FormValues>({
     defaultValues: {
       nickname: planting.nickname ?? '',
@@ -61,6 +64,7 @@ export function PlantingFormDialog({ open, onOpenChange, containerId, planting }
         toast.success('Planting updated')
         onOpenChange(false)
         reset()
+        onSaved?.()
       })
       .catch((error: Error) => toast.error(error.message))
   }

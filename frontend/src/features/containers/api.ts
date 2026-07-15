@@ -5,10 +5,11 @@ import type { ContainerResponse, CreateContainerRequest, UpdateContainerRequest 
 const containersKey = (gardenId: string) => ['gardens', gardenId, 'containers'] as const
 const containerKey = (id: string) => ['containers', id] as const
 
-export function useContainers(gardenId: string) {
+export function useContainers(gardenId: string, enabled = true) {
   return useQuery({
     queryKey: containersKey(gardenId),
     queryFn: () => api.get<ContainerResponse[]>(`/api/v1/gardens/${gardenId}/containers`),
+    enabled: enabled && Boolean(gardenId),
   })
 }
 

@@ -3,6 +3,7 @@ package com.greenthumb.backend.planting;
 import com.greenthumb.backend.common.auth.CurrentUserContext;
 import com.greenthumb.backend.planting.dto.CreatePlantedPlantRequest;
 import com.greenthumb.backend.planting.dto.PlantedPlantResponse;
+import com.greenthumb.backend.planting.dto.QuickAddPlantingRequest;
 import com.greenthumb.backend.planting.dto.UpdatePlantedPlantRequest;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -41,6 +42,19 @@ public class PlantedPlantController {
         PlantedPlant plantedPlant =
                 plantedPlantService.create(containerId, currentUserContext.getAppUserId(), request);
         return ResponseEntity.status(HttpStatus.CREATED).body(PlantedPlantResponse.from(plantedPlant));
+    }
+
+    @PostMapping("/api/v1/plantings")
+    public ResponseEntity<PlantedPlantResponse> quickAdd(@Valid @RequestBody QuickAddPlantingRequest request) {
+        PlantedPlant plantedPlant = plantedPlantService.quickAdd(currentUserContext.getAppUserId(), request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(PlantedPlantResponse.from(plantedPlant));
+    }
+
+    @GetMapping("/api/v1/plantings")
+    public List<PlantedPlantResponse> listAll() {
+        return plantedPlantService.findAllForOwner(currentUserContext.getAppUserId()).stream()
+                .map(PlantedPlantResponse::from)
+                .toList();
     }
 
     @GetMapping("/api/v1/plantings/{id}")

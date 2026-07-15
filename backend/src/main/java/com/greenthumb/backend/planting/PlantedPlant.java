@@ -2,6 +2,7 @@ package com.greenthumb.backend.planting;
 
 import com.greenthumb.backend.container.Container;
 import com.greenthumb.backend.plant.Plant;
+import com.greenthumb.backend.user.AppUser;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -26,13 +27,20 @@ public class PlantedPlant {
     @GeneratedValue
     private UUID id;
 
+    // Null when this planting was quick-added from the dashboard without picking a container yet.
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "container_id", nullable = false)
+    @JoinColumn(name = "container_id")
     private Container container;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "plant_id", nullable = false)
     private Plant plant;
+
+    // Ownership can't always be derived via container -> garden -> owner since container is
+    // optional, so it's tracked directly here (mirrors the container's garden owner when present).
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id", nullable = false)
+    private AppUser owner;
 
     private String nickname;
 
@@ -64,6 +72,7 @@ public class PlantedPlant {
     }
 
     public PlantedPlant(
+            AppUser owner,
             Container container,
             Plant plant,
             String nickname,
@@ -72,6 +81,7 @@ public class PlantedPlant {
             LocalDate plantedDate,
             PlantingStatus status,
             String notes) {
+        this.owner = owner;
         this.container = container;
         this.plant = plant;
         this.nickname = nickname;
@@ -92,6 +102,10 @@ public class PlantedPlant {
 
     public Plant getPlant() {
         return plant;
+    }
+
+    public AppUser getOwner() {
+        return owner;
     }
 
     public String getNickname() {

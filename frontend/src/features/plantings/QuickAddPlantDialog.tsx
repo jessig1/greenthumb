@@ -15,15 +15,16 @@ import { Combobox } from '@/components/ui/combobox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useContainers } from '@/features/containers/api'
+import { useGardens } from '@/features/gardens/api'
 import { usePlants } from '@/features/plants/api'
 import { plantingStatusLabel } from '@/lib/labels'
-import { useCreatePlanting, usePlantings, useUpdateInventoryPlanting } from './api'
+import { useAllPlantings, useQuickAddPlanting, useUpdateInventoryPlanting } from './api'
 import { findMatchingPlanting } from './duplicates'
 
-interface AddPlantsDialogProps {
+interface QuickAddPlantDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  containerId: string
 }
 
 interface DraftPlanting {
@@ -35,20 +36,19 @@ interface DraftPlanting {
 }
 
 const STATUSES: PlantingStatus[] = ['PLANNED', 'PLANTED', 'HARVESTED', 'REMOVED']
+const NO_SELECTION = '__none__'
 
-function todayIsoDate(): string {
-  const now = new Date()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-  return `${now.getFullYear()}-${month}-${day}`
-}
-
-export function AddPlantsDialog({ open, onOpenChange, containerId }: AddPlantsDialogProps) {
+export function QuickAddPlantDialog({ open, onOpenChange }: QuickAddPlantDialogProps) {
+  const { data: gardens } = useGardens()
   const { data: plants } = usePlants()
-  const { data: existingPlantings } = usePlantings(containerId)
-  const createPlanting = useCreatePlanting(containerId)
+  const { data: existingPlantings } = useAllPlantings()
+  const quickAddPlanting = useQuickAddPlanting()
   const updatePlanting = useUpdateInventoryPlanting()
   const plantOptions = plants?.map((plant) => ({ value: plant.id, label: plant.commonName })) ?? []
+
+  const [gardenId, setGardenId] = useState('')
+  const { data: containers } = useContainers(gardenId)
+  const [containerId, setContainerId] = useState('')
 
   const [drafts, setDrafts] = useState<DraftPlanting[]>([])
   const [plantId, setPlantId] = useState('')
@@ -57,6 +57,8 @@ export function AddPlantsDialog({ open, onOpenChange, containerId }: AddPlantsDi
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const resetAll = () => {
+    setGardenId('')
+    setContainerId('')
     setDrafts([])
     setPlantId('')
     setStatus('PLANNED')
@@ -67,6 +69,11 @@ export function AddPlantsDialog({ open, onOpenChange, containerId }: AddPlantsDi
   const handleDialogOpenChange = (next: boolean) => {
     onOpenChange(next)
     if (!next) resetAll()
+  }
+
+  const handleGardenChange = (value: string) => {
+    setGardenId(value === NO_SELECTION ? '' : value)
+    setContainerId('')
   }
 
   const buildDraftFromForm = (): DraftPlanting | null => {
@@ -103,22 +110,20 @@ export function AddPlantsDialog({ open, onOpenChange, containerId }: AddPlantsDi
     setStatus('PLANNED')
     setQuantity(1)
 
-    const today = todayIsoDate()
     const total = allDrafts.length
     const remaining = [...allDrafts]
-    // Snapshot of what's already in this container, kept in sync locally as drafts are submitted
-    // so that adding the same plant/status twice in one batch also merges into a single row rather
-    // than the first draft merging into an existing entry and the second draft missing it because
-    // the query cache hasn't refetched yet.
+    const targetContainerId = containerId || null
+    // Snapshot of the caller's plantings, kept in sync locally as drafts are submitted so that
+    // adding the same plant/status twice in one batch also merges into a single row rather than
+    // the second draft missing the first draft's not-yet-refetched update.
     const working = [...(existingPlantings ?? [])]
 
     try {
       while (remaining.length > 0) {
         const draft = remaining[0]
-        const isPlanned = draft.status === 'PLANNED'
         const match = findMatchingPlanting(working, {
           plantId: draft.plantId,
-          containerId,
+          containerId: targetContainerId,
           status: draft.status,
           nickname: null,
           notes: null,
@@ -139,14 +144,11 @@ export function AddPlantsDialog({ open, onOpenChange, containerId }: AddPlantsDi
           const index = working.findIndex((p) => p.id === match.id)
           working[index] = updated
         } else {
-          const created = await createPlanting.mutateAsync({
+          const created = await quickAddPlanting.mutateAsync({
             plantId: draft.plantId,
-            nickname: null,
-            quantity: draft.quantity,
-            plannedDate: isPlanned ? today : null,
-            plantedDate: isPlanned ? null : today,
+            containerId: targetContainerId,
             status: draft.status,
-            notes: null,
+            quantity: draft.quantity,
           })
           working.push(created)
         }
@@ -168,10 +170,49 @@ export function AddPlantsDialog({ open, onOpenChange, containerId }: AddPlantsDi
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Plants</DialogTitle>
+          <DialogTitle>Add plants</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-2">
+              <Label>Garden (optional)</Label>
+              <Select value={gardenId || NO_SELECTION} onValueChange={handleGardenChange}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_SELECTION}>No garden yet</SelectItem>
+                  {gardens?.map((garden) => (
+                    <SelectItem key={garden.id} value={garden.id}>
+                      {garden.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label>Container (optional)</Label>
+              <Select
+                value={containerId || NO_SELECTION}
+                onValueChange={(value) => setContainerId(value === NO_SELECTION ? '' : value)}
+                disabled={!gardenId}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_SELECTION}>No container yet</SelectItem>
+                  {containers?.map((container) => (
+                    <SelectItem key={container.id} value={container.id}>
+                      {container.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           {drafts.length > 0 && (
             <div className="flex flex-col gap-2">
               {drafts.map((d) => (
@@ -242,7 +283,7 @@ export function AddPlantsDialog({ open, onOpenChange, containerId }: AddPlantsDi
             onClick={handleSubmit}
             disabled={(drafts.length === 0 && !plantId) || isSubmitting}
           >
-            {isSubmitting ? 'Adding…' : 'Add Plants'}
+            {isSubmitting ? 'Adding…' : 'Add plants'}
           </Button>
         </DialogFooter>
       </DialogContent>

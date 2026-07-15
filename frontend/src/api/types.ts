@@ -86,7 +86,10 @@ export interface PlantResponse {
 
 export interface PlantedPlantResponse {
   id: string
-  containerId: string
+  containerId: string | null
+  containerName: string | null
+  gardenId: string | null
+  gardenName: string | null
   plant: PlantResponse
   nickname: string | null
   quantity: number
@@ -115,4 +118,11 @@ export interface UpdatePlantedPlantRequest {
   plantedDate: string | null
   status: PlantingStatus
   notes: string | null
+}
+
+export interface QuickAddPlantingRequest {
+  plantId: string
+  containerId: string | null
+  status: PlantingStatus
+  quantity: number
 }
