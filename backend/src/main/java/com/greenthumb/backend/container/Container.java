@@ -37,6 +37,9 @@ public class Container {
     @Column(name = "size_description")
     private String sizeDescription;
 
+    @Column(name = "soil_notes")
+    private String soilNotes;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -82,6 +85,14 @@ public class Container {
 
     public void setSizeDescription(String sizeDescription) {
         this.sizeDescription = sizeDescription;
+    }
+
+    public String getSoilNotes() {
+        return soilNotes;
+    }
+
+    public void setSoilNotes(String soilNotes) {
+        this.soilNotes = soilNotes;
     }
 
     public Instant getCreatedAt() {

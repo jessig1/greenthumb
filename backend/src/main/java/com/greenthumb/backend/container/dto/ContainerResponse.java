@@ -11,6 +11,7 @@ public record ContainerResponse(
         String name,
         ContainerType containerType,
         String sizeDescription,
+        String soilNotes,
         Instant createdAt) {
 
     public static ContainerResponse from(Container container) {
@@ -20,6 +21,7 @@ public record ContainerResponse(
                 container.getName(),
                 container.getContainerType(),
                 container.getSizeDescription(),
+                container.getSoilNotes(),
                 container.getCreatedAt());
     }
 }

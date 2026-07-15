@@ -41,7 +41,19 @@ class GardenControllerTest {
                         .with(AuthTestSupport.bearerToken(aliceToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new CreateGardenRequest("Backyard", GardenType.OUTDOOR, "Sunny corner"))))
+                                new CreateGardenRequest(
+                                        "Backyard",
+                                        GardenType.OUTDOOR,
+                                        "Sunny corner",
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name", is("Backyard")))
                 .andExpect(jsonPath("$.type", is("OUTDOOR")));
@@ -74,7 +86,19 @@ class GardenControllerTest {
                         .with(AuthTestSupport.bearerToken(bobToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new CreateGardenRequest("Hijacked", GardenType.INDOOR, null))))
+                                new CreateGardenRequest(
+                                        "Hijacked",
+                                        GardenType.INDOOR,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null))))
                 .andExpect(status().isNotFound());
     }
 
@@ -96,7 +120,19 @@ class GardenControllerTest {
                         .with(AuthTestSupport.bearerToken(token))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new CreateGardenRequest(name, GardenType.OUTDOOR, null))))
+                                new CreateGardenRequest(
+                                        name,
+                                        GardenType.OUTDOOR,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null))))
                 .andExpect(status().isCreated())
                 .andReturn()
                 .getResponse()

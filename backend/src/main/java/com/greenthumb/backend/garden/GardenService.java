@@ -35,6 +35,7 @@ public class GardenService {
     public Garden create(UUID ownerId, CreateGardenRequest request) {
         Garden garden = new Garden(
                 appUserRepository.getReferenceById(ownerId), request.name(), request.type(), request.description());
+        applyEnvironmentDetails(garden, request);
         return gardenRepository.save(garden);
     }
 
@@ -44,7 +45,28 @@ public class GardenService {
         garden.setName(request.name());
         garden.setType(request.type());
         garden.setDescription(request.description());
+        garden.setLightSource(request.lightSource());
+        garden.setLightHoursPerDay(request.lightHoursPerDay());
+        garden.setLightExposure(request.lightExposure());
+        garden.setCity(request.city());
+        garden.setState(request.state());
+        garden.setZipCode(request.zipCode());
+        garden.setClimateZone(request.climateZone());
+        garden.setLastFrostDate(request.lastFrostDate());
+        garden.setFirstFrostDate(request.firstFrostDate());
         return garden;
+    }
+
+    private void applyEnvironmentDetails(Garden garden, CreateGardenRequest request) {
+        garden.setLightSource(request.lightSource());
+        garden.setLightHoursPerDay(request.lightHoursPerDay());
+        garden.setLightExposure(request.lightExposure());
+        garden.setCity(request.city());
+        garden.setState(request.state());
+        garden.setZipCode(request.zipCode());
+        garden.setClimateZone(request.climateZone());
+        garden.setLastFrostDate(request.lastFrostDate());
+        garden.setFirstFrostDate(request.firstFrostDate());
     }
 
     @Transactional

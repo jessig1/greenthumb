@@ -11,3 +11,6 @@ export const containerTypeLabel = titleCase
 export const plantCategoryLabel = titleCase
 export const lightRequirementLabel = titleCase
 export const plantingStatusLabel = titleCase
+export const gardenLightSourceLabel = titleCase
+export const gardenLightExposureLabel = titleCase
+export const climateZoneLabel = titleCase

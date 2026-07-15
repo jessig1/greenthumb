@@ -43,7 +43,7 @@ class ContainerControllerTest {
                         .with(AuthTestSupport.bearerToken(aliceToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new CreateContainerRequest("Raised Bed #1", ContainerType.RAISED_BED, "4x8 ft"))))
+                                new CreateContainerRequest("Raised Bed #1", ContainerType.RAISED_BED, "4x8 ft", null))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name", is("Raised Bed #1")))
                 .andExpect(jsonPath("$.gardenId", is(gardenId)));
@@ -73,7 +73,7 @@ class ContainerControllerTest {
                         .with(AuthTestSupport.bearerToken(bobToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new CreateContainerRequest("Intruding Pot", ContainerType.POT, null))))
+                                new CreateContainerRequest("Intruding Pot", ContainerType.POT, null, null))))
                 .andExpect(status().isNotFound());
     }
 
@@ -99,7 +99,19 @@ class ContainerControllerTest {
                         .with(AuthTestSupport.bearerToken(token))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new CreateGardenRequest("Garden", GardenType.OUTDOOR, null))))
+                                new CreateGardenRequest(
+                                        "Garden",
+                                        GardenType.OUTDOOR,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null))))
                 .andExpect(status().isCreated())
                 .andReturn()
                 .getResponse()
@@ -112,7 +124,7 @@ class ContainerControllerTest {
                         .with(AuthTestSupport.bearerToken(token))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new CreateContainerRequest("Container", ContainerType.POT, null))))
+                                new CreateContainerRequest("Container", ContainerType.POT, null, null))))
                 .andExpect(status().isCreated())
                 .andReturn()
                 .getResponse()

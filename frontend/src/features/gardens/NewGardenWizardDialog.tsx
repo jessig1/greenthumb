@@ -28,7 +28,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 import { usePlants } from '@/features/plants/api'
-import { containerTypeLabel, gardenTypeLabel } from '@/lib/labels'
+import { containerTypeLabel, climateZoneLabel, gardenLightExposureLabel, gardenLightSourceLabel, gardenTypeLabel } from '@/lib/labels'
+import { GardenEnvironmentFields } from './GardenEnvironmentFields'
 
 interface NewGardenWizardDialogProps {
   open: boolean
@@ -69,6 +70,36 @@ function emptyContainerDraft(): ContainerDraftFields {
   return { name: '', containerType: 'RAISED_BED', sizeDescription: '' }
 }
 
+function summarizeGardenDetails(values: CreateGardenRequest): string[] {
+  const details: string[] = []
+  if (values.lightSource) details.push(gardenLightSourceLabel(values.lightSource))
+  if (values.lightExposure) details.push(gardenLightExposureLabel(values.lightExposure))
+  if (values.lightHoursPerDay) details.push(`${values.lightHoursPerDay} hrs/day light`)
+  const location = [values.city, values.state, values.zipCode].filter(Boolean).join(', ')
+  if (location) details.push(location)
+  if (values.climateZone) details.push(climateZoneLabel(values.climateZone))
+  if (values.lastFrostDate) details.push(`Last frost ${values.lastFrostDate}`)
+  if (values.firstFrostDate) details.push(`First frost ${values.firstFrostDate}`)
+  return details
+}
+
+function emptyGardenDefaults(): CreateGardenRequest {
+  return {
+    name: '',
+    type: 'OUTDOOR',
+    description: '',
+    lightSource: null,
+    lightHoursPerDay: null,
+    lightExposure: null,
+    city: null,
+    state: null,
+    zipCode: null,
+    climateZone: null,
+    lastFrostDate: null,
+    firstFrostDate: null,
+  }
+}
+
 export function NewGardenWizardDialog({ open, onOpenChange }: NewGardenWizardDialogProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -85,8 +116,9 @@ export function NewGardenWizardDialog({ open, onOpenChange }: NewGardenWizardDia
     handleSubmit: handleGardenSubmit,
     reset: resetGardenForm,
     getValues: getGardenValues,
+    setValue: setGardenValue,
   } = useForm<CreateGardenRequest>({
-    defaultValues: { name: '', type: 'OUTDOOR', description: '' },
+    defaultValues: emptyGardenDefaults(),
   })
 
   const resetAll = () => {
@@ -94,7 +126,7 @@ export function NewGardenWizardDialog({ open, onOpenChange }: NewGardenWizardDia
     setContainers([])
     setContainerDraft(emptyContainerDraft())
     setIsSubmitting(false)
-    resetGardenForm({ name: '', type: 'OUTDOOR', description: '' })
+    resetGardenForm(emptyGardenDefaults())
   }
 
   const handleDialogOpenChange = (next: boolean) => {
@@ -139,7 +171,20 @@ export function NewGardenWizardDialog({ open, onOpenChange }: NewGardenWizardDia
     let garden: GardenResponse | undefined
 
     try {
-      garden = await api.post<GardenResponse>('/api/v1/gardens', getGardenValues())
+      const gardenValues = getGardenValues()
+      const gardenPayload: CreateGardenRequest = {
+        ...gardenValues,
+        lightHoursPerDay:
+          gardenValues.lightHoursPerDay === null || Number.isNaN(gardenValues.lightHoursPerDay)
+            ? null
+            : gardenValues.lightHoursPerDay,
+        city: gardenValues.city || null,
+        state: gardenValues.state || null,
+        zipCode: gardenValues.zipCode || null,
+        lastFrostDate: gardenValues.lastFrostDate || null,
+        firstFrostDate: gardenValues.firstFrostDate || null,
+      }
+      garden = await api.post<GardenResponse>('/api/v1/gardens', gardenPayload)
 
       for (const draftContainer of containers) {
         const container = await api.post<ContainerResponse>(`/api/v1/gardens/${garden.id}/containers`, {
@@ -182,7 +227,7 @@ export function NewGardenWizardDialog({ open, onOpenChange }: NewGardenWizardDia
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>New garden</DialogTitle>
         </DialogHeader>
@@ -229,6 +274,8 @@ export function NewGardenWizardDialog({ open, onOpenChange }: NewGardenWizardDia
               <Label htmlFor="description">Description</Label>
               <Textarea id="description" {...registerGarden('description')} />
             </div>
+
+            <GardenEnvironmentFields register={registerGarden} control={gardenControl} setValue={setGardenValue} />
           </div>
         )}
 
@@ -314,6 +361,11 @@ export function NewGardenWizardDialog({ open, onOpenChange }: NewGardenWizardDia
               <p className="text-sm text-muted-foreground">{gardenTypeLabel(getGardenValues('type'))}</p>
               {getGardenValues('description') && (
                 <p className="mt-1 text-sm text-muted-foreground">{getGardenValues('description')}</p>
+              )}
+              {summarizeGardenDetails(getGardenValues()).length > 0 && (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {summarizeGardenDetails(getGardenValues()).join(' · ')}
+                </p>
               )}
             </div>
 

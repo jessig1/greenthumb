@@ -250,7 +250,19 @@ class PlantedPlantControllerTest {
                         .with(AuthTestSupport.bearerToken(token))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new CreateGardenRequest("Garden", GardenType.OUTDOOR, null))))
+                                new CreateGardenRequest(
+                                        "Garden",
+                                        GardenType.OUTDOOR,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null))))
                 .andExpect(status().isCreated())
                 .andReturn()
                 .getResponse()
@@ -261,7 +273,7 @@ class PlantedPlantControllerTest {
                         .with(AuthTestSupport.bearerToken(token))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new CreateContainerRequest("Container", ContainerType.POT, null))))
+                                new CreateContainerRequest("Container", ContainerType.POT, null, null))))
                 .andExpect(status().isCreated())
                 .andReturn()
                 .getResponse()

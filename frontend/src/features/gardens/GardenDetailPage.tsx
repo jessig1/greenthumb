@@ -1,25 +1,62 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
+import type { PlantedPlantResponse } from '@/api/types'
 import { useDeleteGarden, useGarden } from './api'
 import { GardenFormDialog } from './GardenFormDialog'
 import { useContainers } from '@/features/containers/api'
 import { ContainerFormDialog } from '@/features/containers/ContainerFormDialog'
+import { PlantInventoryList } from '@/features/plantings/PlantInventoryList'
+import { useAllPlantings, useDeleteInventoryPlanting } from '@/features/plantings/api'
+import { buildGardenInventory } from '@/features/plantings/inventory'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { containerTypeLabel, gardenTypeLabel } from '@/lib/labels'
+import {
+  climateZoneLabel,
+  containerTypeLabel,
+  gardenLightExposureLabel,
+  gardenLightSourceLabel,
+  gardenTypeLabel,
+} from '@/lib/labels'
+
+function DetailRow({ label, value }: { label: string; value: string | null }) {
+  return (
+    <div>
+      <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
+      <dd className={value ? 'text-sm' : 'text-sm text-muted-foreground italic'}>{value || 'Not set'}</dd>
+    </div>
+  )
+}
 
 export function GardenDetailPage() {
   const { gardenId } = useParams<{ gardenId: string }>()
   const navigate = useNavigate()
   const { data: garden, isLoading: gardenLoading } = useGarden(gardenId!)
   const { data: containers, isLoading: containersLoading } = useContainers(gardenId!)
+  const { data: allPlantings } = useAllPlantings()
   const deleteGarden = useDeleteGarden()
+  const deleteInventoryPlanting = useDeleteInventoryPlanting()
 
   const [editOpen, setEditOpen] = useState(false)
   const [createContainerOpen, setCreateContainerOpen] = useState(false)
+  const [showMoreDetails, setShowMoreDetails] = useState(false)
+
+  const gardenPlantings = useMemo(
+    () => (allPlantings ?? []).filter((p) => p.gardenId === gardenId),
+    [allPlantings, gardenId],
+  )
+  const inventory = useMemo(() => buildGardenInventory(gardenPlantings), [gardenPlantings])
+  const totalQuantity = inventory.reduce((sum, item) => sum + item.totalQuantity, 0)
+
+  const handleRemoveTag = (plantings: PlantedPlantResponse[]) => {
+    for (const planting of plantings) {
+      deleteInventoryPlanting.mutate(planting, {
+        onError: (error: Error) => toast.error(error.message),
+      })
+    }
+  }
 
   const handleDelete = () => {
     if (!garden) return
@@ -48,12 +85,9 @@ export function GardenDetailPage() {
       </Link>
 
       <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-semibold">{garden.name}</h1>
-            <Badge variant="secondary">{gardenTypeLabel(garden.type)}</Badge>
-          </div>
-          {garden.description && <p className="mt-1 text-muted-foreground">{garden.description}</p>}
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-semibold">{garden.name}</h1>
+          <Badge variant="secondary">{gardenTypeLabel(garden.type)}</Badge>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setEditOpen(true)}>
@@ -64,6 +98,57 @@ export function GardenDetailPage() {
           </Button>
         </div>
       </div>
+
+      <Card>
+        <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <DetailRow label="Description" value={garden.description} />
+          <DetailRow
+            label="Location"
+            value={
+              [[garden.city, garden.state].filter(Boolean).join(', '), garden.zipCode].filter(Boolean).join(' ') ||
+              null
+            }
+          />
+          <DetailRow label="Climate zone" value={garden.climateZone ? climateZoneLabel(garden.climateZone) : null} />
+        </CardContent>
+        {showMoreDetails && (
+          <CardContent className="grid grid-cols-1 gap-4 border-t pt-4 sm:grid-cols-3">
+            <DetailRow
+              label="Light source"
+              value={garden.lightSource ? gardenLightSourceLabel(garden.lightSource) : null}
+            />
+            <DetailRow
+              label="Light exposure"
+              value={garden.lightExposure ? gardenLightExposureLabel(garden.lightExposure) : null}
+            />
+            <DetailRow
+              label="Hours of light/day"
+              value={garden.lightHoursPerDay != null ? `${garden.lightHoursPerDay} hrs/day` : null}
+            />
+            <DetailRow label="Last spring frost" value={garden.lastFrostDate} />
+            <DetailRow label="First fall frost" value={garden.firstFrostDate} />
+          </CardContent>
+        )}
+        <CardContent className="pt-0">
+          <Button variant="outline" size="sm" onClick={() => setShowMoreDetails((v) => !v)}>
+            {showMoreDetails ? 'Hide details' : 'View more details'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {inventory.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-medium">Plant inventory</h2>
+            <span className="text-sm text-muted-foreground">{totalQuantity} plants total</span>
+          </div>
+          <Card>
+            <CardContent className="py-1">
+              <PlantInventoryList inventory={inventory} onRemoveTag={handleRemoveTag} />
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">

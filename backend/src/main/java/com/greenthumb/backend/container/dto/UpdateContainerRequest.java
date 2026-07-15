@@ -5,4 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public record UpdateContainerRequest(
-        @NotBlank String name, @NotNull ContainerType containerType, String sizeDescription) {}
+        @NotBlank String name,
+        @NotNull ContainerType containerType,
+        String sizeDescription,
+        String soilNotes) {}

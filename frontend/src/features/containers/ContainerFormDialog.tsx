@@ -25,8 +25,13 @@ export function ContainerFormDialog({ open, onOpenChange, gardenId, container }:
   const navigate = useNavigate()
   const { register, control, handleSubmit, reset } = useForm<CreateContainerRequest>({
     defaultValues: container
-      ? { name: container.name, containerType: container.containerType, sizeDescription: container.sizeDescription }
-      : { name: '', containerType: 'RAISED_BED', sizeDescription: '' },
+      ? {
+          name: container.name,
+          containerType: container.containerType,
+          sizeDescription: container.sizeDescription,
+          soilNotes: container.soilNotes,
+        }
+      : { name: '', containerType: 'RAISED_BED', sizeDescription: '', soilNotes: '' },
   })
 
   const createContainer = useCreateContainer(gardenId)
@@ -88,6 +93,10 @@ export function ContainerFormDialog({ open, onOpenChange, gardenId, container }:
           <div className="flex flex-col gap-2">
             <Label htmlFor="sizeDescription">Size</Label>
             <Textarea id="sizeDescription" placeholder="e.g. 4x8 ft" {...register('sizeDescription')} />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="soilNotes">Soil</Label>
+            <Textarea id="soilNotes" placeholder="e.g. clay, amended with compost" {...register('soilNotes')} />
           </div>
           <DialogFooter>
             <Button type="submit" disabled={mutation.isPending}>

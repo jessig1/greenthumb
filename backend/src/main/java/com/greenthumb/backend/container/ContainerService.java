@@ -37,6 +37,7 @@ public class ContainerService {
     public Container create(UUID gardenId, UUID ownerId, CreateContainerRequest request) {
         Garden garden = gardenService.getForOwner(gardenId, ownerId);
         Container container = new Container(garden, request.name(), request.containerType(), request.sizeDescription());
+        container.setSoilNotes(request.soilNotes());
         return containerRepository.save(container);
     }
 
@@ -46,6 +47,7 @@ public class ContainerService {
         container.setName(request.name());
         container.setContainerType(request.containerType());
         container.setSizeDescription(request.sizeDescription());
+        container.setSoilNotes(request.soilNotes());
         return container;
     }
 

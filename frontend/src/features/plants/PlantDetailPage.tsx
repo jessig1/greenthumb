@@ -1,4 +1,4 @@
-import { Link, useParams } from 'react-router'
+import { Link, useLocation, useParams } from 'react-router'
 import { usePlant } from './api'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -16,9 +16,16 @@ function CareSection({ title, value, notes }: { title: string; value?: string | 
   )
 }
 
+interface PlantDetailNavState {
+  from?: string
+  fromLabel?: string
+}
+
 export function PlantDetailPage() {
   const { plantId } = useParams<{ plantId: string }>()
   const { data: plant, isLoading } = usePlant(plantId!)
+  const location = useLocation()
+  const { from, fromLabel } = (location.state as PlantDetailNavState | null) ?? {}
 
   if (isLoading) {
     return <Skeleton className="h-64" />
@@ -30,8 +37,8 @@ export function PlantDetailPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Link to="/plants" className="text-sm text-muted-foreground hover:text-foreground">
-        ← Back to catalog
+      <Link to={from ?? '/plants'} className="text-sm text-muted-foreground hover:text-foreground">
+        ← Back to {fromLabel ?? 'catalog'}
       </Link>
 
       <div>

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
+import type { PlantingStatus } from '@/api/types'
 import { useContainer, useDeleteContainer } from './api'
 import { ContainerFormDialog } from './ContainerFormDialog'
 import { useDeletePlanting, usePlantings } from '@/features/plantings/api'
@@ -13,6 +14,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { containerTypeLabel, plantingStatusLabel } from '@/lib/labels'
 
+const STATUS_SECTION_ORDER: PlantingStatus[] = ['PLANNED', 'PLANTED', 'HARVESTED', 'REMOVED']
+
 export function ContainerDetailPage() {
   const { gardenId, containerId } = useParams<{ gardenId: string; containerId: string }>()
   const navigate = useNavigate()
@@ -22,6 +25,21 @@ export function ContainerDetailPage() {
   const deletePlanting = useDeletePlanting(containerId!)
 
   const groups = useMemo(() => groupDuplicatePlantings(plantings ?? []), [plantings])
+
+  // Section the already-quantity-combined groups by status (e.g. two planted carrots stay one
+  // "Carrot ×2" card, filed under the Planted section), in a fixed lifecycle order.
+  const groupsByStatus = useMemo(() => {
+    const map = new Map<PlantingStatus, PlantingGroup[]>()
+    for (const group of groups) {
+      const list = map.get(group.representative.status)
+      if (list) {
+        list.push(group)
+      } else {
+        map.set(group.representative.status, [group])
+      }
+    }
+    return map
+  }, [groups])
 
   const [editContainerOpen, setEditContainerOpen] = useState(false)
   const [addPlantsOpen, setAddPlantsOpen] = useState(false)
@@ -71,6 +89,11 @@ export function ContainerDetailPage() {
             <Badge variant="secondary">{containerTypeLabel(container.containerType)}</Badge>
           </div>
           {container.sizeDescription && <p className="mt-1 text-muted-foreground">{container.sizeDescription}</p>}
+          {container.soilNotes && (
+            <p className="mt-1 text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">Soil:</span> {container.soilNotes}
+            </p>
+          )}
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setEditContainerOpen(true)}>
@@ -93,39 +116,52 @@ export function ContainerDetailPage() {
         ) : groups.length === 0 ? (
           <p className="text-muted-foreground">Nothing planned here yet.</p>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {groups.map((group) => {
-              const { representative } = group
-              return (
-                <Card key={group.key}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between gap-2">
-                      <Link to={`/plants/${representative.plant.id}`} className="hover:underline">
-                        {representative.nickname ?? representative.plant.commonName}
-                      </Link>
-                      <Badge variant="secondary">{plantingStatusLabel(representative.status)}</Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex flex-col gap-2 text-sm">
-                    {representative.nickname && (
-                      <p className="text-muted-foreground">{representative.plant.commonName}</p>
-                    )}
-                    <p>Quantity: {group.totalQuantity}</p>
-                    {representative.plannedDate && <p>Planned for: {representative.plannedDate}</p>}
-                    {representative.plantedDate && <p>Planted on: {representative.plantedDate}</p>}
-                    {representative.notes && <p className="text-muted-foreground">{representative.notes}</p>}
-                    <div className="mt-2 flex gap-2">
-                      <Button size="sm" variant="outline" onClick={() => setEditingGroup(group)}>
-                        Edit
-                      </Button>
-                      <Button size="sm" variant="destructive" onClick={() => handleDeleteGroup(group)}>
-                        Remove
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
+          <div className="flex flex-col gap-6">
+            {STATUS_SECTION_ORDER.filter((status) => groupsByStatus.has(status)).map((status) => (
+              <div key={status} className="flex flex-col gap-3">
+                <h3 className="text-sm font-semibold text-muted-foreground">{plantingStatusLabel(status)}</h3>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  {groupsByStatus.get(status)!.map((group) => {
+                    const { representative } = group
+                    return (
+                      <Card key={group.key}>
+                        <CardHeader>
+                          <CardTitle className="flex items-center justify-between gap-2">
+                            <Link
+                              to={`/plants/${representative.plant.id}`}
+                              state={{
+                                from: `/gardens/${gardenId}/containers/${containerId}`,
+                                fromLabel: container?.name ?? 'container',
+                              }}
+                              className="hover:underline"
+                            >
+                              {representative.nickname ?? representative.plant.commonName}
+                            </Link>
+                            <Badge variant="secondary">×{group.totalQuantity}</Badge>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex flex-col gap-2 text-sm">
+                          {representative.nickname && (
+                            <p className="text-muted-foreground">{representative.plant.commonName}</p>
+                          )}
+                          {representative.plannedDate && <p>Planned for: {representative.plannedDate}</p>}
+                          {representative.plantedDate && <p>Planted on: {representative.plantedDate}</p>}
+                          {representative.notes && <p className="text-muted-foreground">{representative.notes}</p>}
+                          <div className="mt-2 flex gap-2">
+                            <Button size="sm" variant="outline" onClick={() => setEditingGroup(group)}>
+                              Edit
+                            </Button>
+                            <Button size="sm" variant="destructive" onClick={() => handleDeleteGroup(group)}>
+                              Remove
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>

@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
-import { XIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import type { PlantedPlantResponse } from '@/api/types'
 import { useGardens } from './api'
@@ -9,8 +8,9 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { gardenTypeLabel, plantingStatusLabel } from '@/lib/labels'
+import { gardenTypeLabel } from '@/lib/labels'
 import { QuickAddPlantDialog } from '@/features/plantings/QuickAddPlantDialog'
+import { PlantInventoryList } from '@/features/plantings/PlantInventoryList'
 import { useAllPlantings, useDeleteInventoryPlanting } from '@/features/plantings/api'
 import { buildPlantInventory } from '@/features/plantings/inventory'
 
@@ -24,7 +24,16 @@ export function GardensListPage() {
   const inventory = useMemo(() => buildPlantInventory(allPlantings ?? []), [allPlantings])
   const totalQuantity = inventory.reduce((sum, item) => sum + item.totalQuantity, 0)
 
-  const handleRemove = (plantings: PlantedPlantResponse[]) => {
+  const plantCountByGarden = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const planting of allPlantings ?? []) {
+      if (planting.status === 'REMOVED' || !planting.gardenId) continue
+      counts.set(planting.gardenId, (counts.get(planting.gardenId) ?? 0) + planting.quantity)
+    }
+    return counts
+  }, [allPlantings])
+
+  const handleRemoveTag = (plantings: PlantedPlantResponse[]) => {
     for (const planting of plantings) {
       deleteInventoryPlanting.mutate(planting, {
         onError: (error: Error) => toast.error(error.message),
@@ -65,9 +74,11 @@ export function GardensListPage() {
                     <Badge variant="secondary">{gardenTypeLabel(garden.type)}</Badge>
                   </CardTitle>
                 </CardHeader>
-                {garden.description && (
-                  <CardContent className="text-sm text-muted-foreground">{garden.description}</CardContent>
-                )}
+                <CardContent className="flex flex-col gap-1 text-sm text-muted-foreground">
+                  {garden.description && <p className="line-clamp-2">{garden.description}</p>}
+                  {(garden.city || garden.state) && <p>{[garden.city, garden.state].filter(Boolean).join(', ')}</p>}
+                  <p>{plantCountByGarden.get(garden.id) ?? 0} plants</p>
+                </CardContent>
               </Card>
             </Link>
           ))}
@@ -80,40 +91,11 @@ export function GardensListPage() {
             <h2 className="text-lg font-medium">Plant inventory</h2>
             <span className="text-sm text-muted-foreground">{totalQuantity} plants total</span>
           </div>
-          <div className="flex flex-col gap-2">
-            {inventory.map((item) => (
-              <Card key={item.plantId}>
-                <CardContent className="flex flex-col gap-2 py-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <Link to={`/plants/${item.plantId}`} className="font-medium hover:underline">
-                      {item.plantName}
-                    </Link>
-                    <Badge variant="secondary">{item.totalQuantity} total</Badge>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {item.tags.map((tag) => (
-                      <div
-                        key={`${tag.label}::${tag.status}`}
-                        className="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs"
-                      >
-                        <span>{tag.label}</span>
-                        <span className="text-muted-foreground">×{tag.quantity}</span>
-                        <Badge variant="secondary">{plantingStatusLabel(tag.status)}</Badge>
-                        <button
-                          type="button"
-                          className="text-muted-foreground hover:text-foreground"
-                          onClick={() => handleRemove(tag.plantings)}
-                        >
-                          <XIcon className="size-3" />
-                          <span className="sr-only">Remove</span>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <Card>
+            <CardContent className="py-1">
+              <PlantInventoryList inventory={inventory} onRemoveTag={handleRemoveTag} />
+            </CardContent>
+          </Card>
         </div>
       )}
 
