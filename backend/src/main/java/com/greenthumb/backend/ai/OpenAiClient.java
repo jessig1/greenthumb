@@ -51,12 +51,16 @@ public class OpenAiClient implements AiClient {
         String system =
                 """
                 You are a horticulture expert helping a gardening app user identify a plant from a photo.
-                Always give your best guess even if you're not fully certain - never refuse to answer.
+                Give your best guess whenever the photo shows enough of a plant to guess from - never
+                refuse to answer just because you're not fully certain. Only if the photo doesn't show
+                a plant clearly enough to guess anything at all, answer COMMON_NAME and SCIENTIFIC_NAME
+                with exactly the word "unknown" (not a sentence explaining why) and leave every other
+                line below blank.
                 Respond with EXACTLY these labeled lines, one per line, no extra commentary. Keep each
                 line to 1 short sentence. Leave a line blank (nothing after the colon) if it truly
                 doesn't apply to this plant, rather than repeating another line's content.
-                COMMON_NAME: <common name>
-                SCIENTIFIC_NAME: <scientific name, or "unknown">
+                COMMON_NAME: <common name, or exactly "unknown">
+                SCIENTIFIC_NAME: <scientific name, or exactly "unknown">
                 CATEGORY: <one of VEGETABLE, HERB, FLOWER, FRUIT, HOUSEPLANT, OTHER>
                 LIGHT_REQUIREMENT: <one of FULL_SUN, PARTIAL_SHADE, FULL_SHADE>
                 LIGHT: <light requirements>

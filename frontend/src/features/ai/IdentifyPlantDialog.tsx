@@ -127,18 +127,26 @@ export function IdentifyPlantDialog({ open, onOpenChange }: IdentifyPlantDialogP
                   )}
                 </div>
 
-                <div>
-                  <p className="mb-2 text-sm font-semibold">Care guide</p>
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    <CareItem icon={Sun} label="Light" value={result.light} />
-                    <CareItem icon={Layers} label="Soil" value={result.soil} />
-                    <CareItem icon={Droplets} label="Watering" value={result.watering} />
-                    <CareItem icon={Sprout} label="Fertilizer" value={result.fertilizer} />
-                    <CareItem icon={Scissors} label="Pruning" value={result.pruning} />
-                    <CareItem icon={Bug} label="Pest management" value={result.pestManagement} />
-                    <CareItem icon={Info} label="Other" value={result.other} />
+                {(result.light ||
+                  result.soil ||
+                  result.watering ||
+                  result.fertilizer ||
+                  result.pruning ||
+                  result.pestManagement ||
+                  result.other) && (
+                  <div>
+                    <p className="mb-2 text-sm font-semibold">Care guide</p>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <CareItem icon={Sun} label="Light" value={result.light} />
+                      <CareItem icon={Layers} label="Soil" value={result.soil} />
+                      <CareItem icon={Droplets} label="Watering" value={result.watering} />
+                      <CareItem icon={Sprout} label="Fertilizer" value={result.fertilizer} />
+                      <CareItem icon={Scissors} label="Pruning" value={result.pruning} />
+                      <CareItem icon={Bug} label="Pest management" value={result.pestManagement} />
+                      <CareItem icon={Info} label="Other" value={result.other} />
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {result.notes && (
                   <p className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">{result.notes}</p>

@@ -134,8 +134,12 @@ public class PlantIdentificationService {
         }
     }
 
+    // Substring (not exact-match) check on purpose: the model is prompted to answer exactly
+    // "unknown", but in practice it sometimes hedges with a descriptive phrase instead (e.g.
+    // "Unknown (photo too unclear)") - checking for the word anywhere in the name catches that
+    // without relying on the model always following the exact-match convention.
     private boolean isUsable(String commonName) {
-        return commonName != null && !commonName.isBlank() && !UNKNOWN.equalsIgnoreCase(commonName.trim());
+        return commonName != null && !commonName.isBlank() && !commonName.toLowerCase().contains(UNKNOWN);
     }
 
     /**
