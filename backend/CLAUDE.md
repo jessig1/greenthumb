@@ -78,6 +78,19 @@ and attach each one's JWT with `AuthTestSupport.bearerToken(token)` to simulate 
 the same test class (see `GardenControllerTest.oneUserCannotReadAnotherUsersGarden` for the
 pattern).
 
+**External-provider fakes (`StorageService`, `AiClient`)**: `MinioStorageService` and
+`OpenAiClient` are annotated `@Profile("!test")`; `FakeStorageService`
+(`photo/storage/FakeStorageService.java`, in-memory) and `FakeAiClient` (`ai/FakeAiClient.java`,
+canned responses) are `@Profile("test")` and live under `src/test/java` in the same package
+structure so Spring's component scan picks them up automatically. The `test` profile is activated
+globally for every test via a `spring.profiles.active` system property on the `maven-surefire-plugin`
+in `pom.xml` — **not** a `src/test/resources/application.properties` file, since only one
+classpath `application.properties` is ever loaded and a test-resources copy would silently shadow
+(not merge with) the real one in `src/main/resources`, breaking every other property (this
+happened once and broke the entire suite — `Could not resolve placeholder 'app.jwt.secret'`). If a
+new module needs its own external-provider fake, follow this same pattern rather than reaching for
+a test resources file.
+
 **Known gap in this testing setup - `@Transactional` can mask `LazyInitializationException`.**
 `@Transactional` on the test class keeps one Hibernate session open for the *entire* test method,
 including every MockMvc call inside it. Real request handling doesn't work that way (see below) -

@@ -9,6 +9,9 @@ import { ContainerFormDialog } from '@/features/containers/ContainerFormDialog'
 import { PlantInventoryList } from '@/features/plantings/PlantInventoryList'
 import { useAllPlantings, useDeleteInventoryPlanting } from '@/features/plantings/api'
 import { buildGardenInventory } from '@/features/plantings/inventory'
+import { usePhotos, useDeletePhoto } from '@/features/photos/api'
+import { PhotoGallery } from '@/features/photos/PhotoGallery'
+import { PhotoUploadDialog } from '@/features/photos/PhotoUploadDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -36,11 +39,14 @@ export function GardenDetailPage() {
   const { data: garden, isLoading: gardenLoading } = useGarden(gardenId!)
   const { data: containers, isLoading: containersLoading } = useContainers(gardenId!)
   const { data: allPlantings } = useAllPlantings()
+  const { data: photos } = usePhotos('GARDEN', gardenId!)
   const deleteGarden = useDeleteGarden()
   const deleteInventoryPlanting = useDeleteInventoryPlanting()
+  const deletePhoto = useDeletePhoto('GARDEN', gardenId!)
 
   const [editOpen, setEditOpen] = useState(false)
   const [createContainerOpen, setCreateContainerOpen] = useState(false)
+  const [uploadPhotoOpen, setUploadPhotoOpen] = useState(false)
   const [showMoreDetails, setShowMoreDetails] = useState(false)
 
   const gardenPlantings = useMemo(
@@ -90,6 +96,9 @@ export function GardenDetailPage() {
           <Badge variant="secondary">{gardenTypeLabel(garden.type)}</Badge>
         </div>
         <div className="flex gap-2">
+          <Link to={`/gardens/${garden.id}/assistant`}>
+            <Button variant="outline">Planning assistant</Button>
+          </Link>
           <Button variant="outline" onClick={() => setEditOpen(true)}>
             Edit
           </Button>
@@ -150,6 +159,16 @@ export function GardenDetailPage() {
         </div>
       )}
 
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-medium">Photos</h2>
+          <Button variant="outline" size="sm" onClick={() => setUploadPhotoOpen(true)}>
+            Add photo
+          </Button>
+        </div>
+        <PhotoGallery photos={photos ?? []} onDelete={(photoId) => deletePhoto.mutate(photoId)} />
+      </div>
+
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-medium">Containers</h2>
@@ -183,6 +202,12 @@ export function GardenDetailPage() {
 
       <GardenFormDialog open={editOpen} onOpenChange={setEditOpen} garden={garden} />
       <ContainerFormDialog open={createContainerOpen} onOpenChange={setCreateContainerOpen} gardenId={garden.id} />
+      <PhotoUploadDialog
+        open={uploadPhotoOpen}
+        onOpenChange={setUploadPhotoOpen}
+        entityType="GARDEN"
+        entityId={garden.id}
+      />
     </div>
   )
 }

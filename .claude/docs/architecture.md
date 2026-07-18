@@ -8,20 +8,24 @@ For REST conventions, see [`api-conventions.md`](api-conventions.md).
 
 ```mermaid
 flowchart LR
-    Browser["Browser<br/>React SPA"] -->|"REST + JSON<br/>X-Dev-User-Id header"| Backend
+    Browser["Browser<br/>React SPA"] -->|"REST + JSON<br/>Bearer JWT"| Backend
     Backend["Spring Boot<br/>REST API :8080"] --> DB[("PostgreSQL")]
+    Backend --> MinIO[("MinIO<br/>local S3 stand-in")]
+    Backend --> OpenAI["OpenAI API<br/>gpt-5.4-nano"]
 
     subgraph "Planned (not built yet)"
         Backend -.-> Cognito["Cognito<br/>JWT auth"]
-        Backend -.-> Bedrock["Bedrock<br/>AI planning/diagnosis"]
         Scheduler["EventBridge Scheduler"] -.-> Lambda["Lambda"] -.-> DB
     end
 ```
 
 Locally: the frontend (`:5173`) talks directly to the backend (`:8080`), which talks to a plain
-Postgres container. In the cloud (planned): React build served from S3 + CloudFront, backend runs
-on App Runner, database is Aurora PostgreSQL Serverless (scale-to-zero). See the "Infrastructure"
-section below for the full planned topology and why each piece was chosen.
+Postgres container, a MinIO container (photo storage, S3-compatible), and the OpenAI API
+directly (photo identification/diagnosis, garden planning). In the cloud (planned): React build
+served from S3 + CloudFront, backend runs on App Runner, database is Aurora PostgreSQL Serverless
+(scale-to-zero), MinIO is replaced by real S3, and the OpenAI API call is replaced by Bedrock
+IAM-role auth behind the same `AiClient` interface. See the "Infrastructure" section below for the
+full planned topology and why each piece was chosen.
 
 ## Data model
 
@@ -31,6 +35,9 @@ erDiagram
     GARDEN ||--o{ CONTAINER : contains
     CONTAINER ||--o{ PLANTED_PLANT : contains
     PLANT ||--o{ PLANTED_PLANT : "planted as"
+    APP_USER ||--o{ PHOTO : owns
+    PLANTED_PLANT ||--o{ PLANT_DIAGNOSIS : "diagnosed via"
+    PHOTO |o--o{ PLANT_DIAGNOSIS : "grounds (optional)"
 
     APP_USER {
         uuid id PK
@@ -80,6 +87,22 @@ erDiagram
         enum status "PLANNED | PLANTED | HARVESTED | REMOVED"
         string notes
     }
+    PHOTO {
+        uuid id PK
+        uuid owner_id FK
+        enum entity_type "GARDEN | CONTAINER | PLANTED_PLANT"
+        uuid entity_id "polymorphic - not a real FK"
+        string object_key "MinIO/S3 key"
+        string content_type
+        string caption
+    }
+    PLANT_DIAGNOSIS {
+        uuid id PK
+        uuid planted_plant_id FK
+        uuid photo_id FK "nullable - null means a text-only care suggestion"
+        uuid owner_id FK
+        string result_text "AI response, free text"
+    }
 ```
 
 **Design decisions worth knowing:**
@@ -101,13 +124,33 @@ erDiagram
   in the ground) and an "actual planting" share one table instead of two.
 - **All enums are stored as `VARCHAR` with a `CHECK` constraint**, not native Postgres enum types or
   integer codes - keeps adding a new enum value a pure additive migration.
+- **`Photo` is polymorphic** (`entity_type` + `entity_id`, covering `Garden`, `Container`, and
+  `PlantedPlant`) rather than three separate photo tables. Like `PlantedPlant.owner`, `owner_id` is
+  denormalized directly onto the row - `entity_id` can't be a real FK since it points at three
+  different tables, so ownership can't be derived through a join the way it is for `Container`
+  (via `Garden`).
+- **`PlantDiagnosis` covers both photo-based diagnosis and text-only care suggestions** with one
+  table - a care suggestion is just a diagnosis row with `photo_id` null. The AI's response is
+  stored as an unstructured text blob (`result_text`), not parsed into structured fields - a
+  deliberate MVP scope cut, same spirit as the free-text halves of the `Plant` care-guide fields.
+
+Plant identification (photo → best-guess species, to help a user add an unknown plant) is
+deliberately **not persisted** - it's a one-off aid for picking what to add via the existing
+add-to-garden/container/inventory flow, not a record tied to any entity.
 
 ## Backend architecture
 
-Spring Boot, package-by-domain (`user`, `garden`, `container`, `plant`, `planting`, `common`), each
-following the same entity → repository → service → controller shape. REST API under `/api/v1`.
-Full conventions, the ownership-enforcement pattern, and the module-adding playbook live in
-[`backend/CLAUDE.md`](../../backend/CLAUDE.md) - read that before touching backend code.
+Spring Boot, package-by-domain (`user`, `garden`, `container`, `plant`, `planting`, `photo`, `ai`,
+`diagnosis`, `common`), each following the same entity → repository → service → controller shape.
+REST API under `/api/v1`. Full conventions, the ownership-enforcement pattern, and the
+module-adding playbook live in [`backend/CLAUDE.md`](../../backend/CLAUDE.md) - read that before
+touching backend code.
+
+`photo`'s `StorageService` interface and `ai`'s `AiClient` interface are the two provider seams:
+`MinioStorageService`/`OpenAiClient` are the local-dev implementations, swapped for
+S3/Bedrock-backed implementations later without touching any caller. Both are excluded from the
+`test` Spring profile (see `backend/CLAUDE.md` → Testing) in favor of in-memory/canned fakes, so
+the test suite never needs a live MinIO container or the real OpenAI API.
 
 Auth is currently a **dev-only stub** (`X-Dev-User-Id` header → auto-provisioned `AppUser`), not
 real Cognito JWT validation. See the root `CLAUDE.md` for why and what changes when Cognito exists.
@@ -126,6 +169,7 @@ feature-adding playbook live in [`frontend/CLAUDE.md`](../../frontend/CLAUDE.md)
 | Database | Aurora PostgreSQL, Serverless scale-to-zero | Near-$0 compute cost while idle |
 | Auth | Amazon Cognito (Lite tier) | Free at hobby scale (10K MAU free tier) |
 | Static hosting | S3 + CloudFront | Pennies at this scale |
+| Photo storage | S3 (MinIO container locally) | Pennies at this scale; `StorageService` already speaks the S3 API |
 | IaC | Terraform | Broad ecosystem support for infra touched infrequently |
 | CI/CD | GitHub Actions | Free at this scale |
 
@@ -138,5 +182,12 @@ additive) generated by EventBridge Scheduler → Lambda → RDS Data API, kept d
 App Runner's request/response path so it doesn't defeat Aurora's scale-to-zero by polling
 constantly.
 
-**Planned AI features:** a new `ai` backend package calling Amazon Bedrock (Claude, vision-capable
-for photo diagnosis) via IAM role auth - no API key to manage.
+**AI features (built, local-dev stand-in):** the `ai` backend package's `AiClient` interface
+covers plant identification, photo-based diagnosis, care suggestions, and a garden planning
+assistant. It's currently implemented by `OpenAiClient`, calling the OpenAI API directly
+with an API key (model `gpt-5.4-nano`, chosen for near-$0 cost at hobby scale) - the original
+plan of calling Amazon Bedrock via IAM role auth (no API key to manage) is the **planned**
+production implementation once the app deploys, as a second `AiClient` implementation behind the
+same interface. Photo storage follows the same pattern: `StorageService` is implemented by
+`MinioStorageService` locally (MinIO container in `docker-compose.yml`, S3-compatible SDK calls
+with an endpoint override) and swaps to real S3 + IAM auth the same way.

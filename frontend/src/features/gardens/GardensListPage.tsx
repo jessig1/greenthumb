@@ -13,6 +13,7 @@ import { QuickAddPlantDialog } from '@/features/plantings/QuickAddPlantDialog'
 import { PlantInventoryList } from '@/features/plantings/PlantInventoryList'
 import { useAllPlantings, useDeleteInventoryPlanting } from '@/features/plantings/api'
 import { buildPlantInventory } from '@/features/plantings/inventory'
+import { RecentIdentifications } from '@/features/ai/RecentIdentifications'
 
 export function GardensListPage() {
   const { data: gardens, isLoading } = useGardens()
@@ -98,6 +99,8 @@ export function GardensListPage() {
           </Card>
         </div>
       )}
+
+      <RecentIdentifications />
 
       <NewGardenWizardDialog open={createOpen} onOpenChange={setCreateOpen} />
       <QuickAddPlantDialog open={addPlantOpen} onOpenChange={setAddPlantOpen} />

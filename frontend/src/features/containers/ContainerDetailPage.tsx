@@ -8,6 +8,10 @@ import { useDeletePlanting, usePlantings } from '@/features/plantings/api'
 import { AddPlantsDialog } from '@/features/plantings/AddPlantsDialog'
 import { PlantingFormDialog } from '@/features/plantings/PlantingFormDialog'
 import { groupDuplicatePlantings, type PlantingGroup } from '@/features/plantings/duplicates'
+import { usePhotos, useDeletePhoto } from '@/features/photos/api'
+import { PhotoGallery } from '@/features/photos/PhotoGallery'
+import { PhotoUploadDialog } from '@/features/photos/PhotoUploadDialog'
+import { PlantDiagnosisDialog } from '@/features/ai/PlantDiagnosisDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -21,8 +25,10 @@ export function ContainerDetailPage() {
   const navigate = useNavigate()
   const { data: container, isLoading: containerLoading } = useContainer(containerId!)
   const { data: plantings, isLoading: plantingsLoading } = usePlantings(containerId!)
+  const { data: containerPhotos } = usePhotos('CONTAINER', containerId!)
   const deleteContainer = useDeleteContainer(gardenId!)
   const deletePlanting = useDeletePlanting(containerId!)
+  const deleteContainerPhoto = useDeletePhoto('CONTAINER', containerId!)
 
   const groups = useMemo(() => groupDuplicatePlantings(plantings ?? []), [plantings])
 
@@ -43,7 +49,9 @@ export function ContainerDetailPage() {
 
   const [editContainerOpen, setEditContainerOpen] = useState(false)
   const [addPlantsOpen, setAddPlantsOpen] = useState(false)
+  const [uploadPhotoOpen, setUploadPhotoOpen] = useState(false)
   const [editingGroup, setEditingGroup] = useState<PlantingGroup | null>(null)
+  const [photosGroup, setPhotosGroup] = useState<PlantingGroup | null>(null)
 
   const handleDeleteContainer = () => {
     if (!container) return
@@ -105,6 +113,19 @@ export function ContainerDetailPage() {
         </div>
       </div>
 
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-medium">Photos</h2>
+          <Button variant="outline" size="sm" onClick={() => setUploadPhotoOpen(true)}>
+            Add photo
+          </Button>
+        </div>
+        <PhotoGallery
+          photos={containerPhotos ?? []}
+          onDelete={(photoId) => deleteContainerPhoto.mutate(photoId)}
+        />
+      </div>
+
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-medium">Plantings</h2>
@@ -151,6 +172,9 @@ export function ContainerDetailPage() {
                             <Button size="sm" variant="outline" onClick={() => setEditingGroup(group)}>
                               Edit
                             </Button>
+                            <Button size="sm" variant="outline" onClick={() => setPhotosGroup(group)}>
+                              Photos
+                            </Button>
                             <Button size="sm" variant="destructive" onClick={() => handleDeleteGroup(group)}>
                               Remove
                             </Button>
@@ -173,6 +197,20 @@ export function ContainerDetailPage() {
         container={container}
       />
       <AddPlantsDialog open={addPlantsOpen} onOpenChange={setAddPlantsOpen} containerId={containerId!} />
+      <PhotoUploadDialog
+        open={uploadPhotoOpen}
+        onOpenChange={setUploadPhotoOpen}
+        entityType="CONTAINER"
+        entityId={containerId!}
+      />
+      {photosGroup && (
+        <PlantDiagnosisDialog
+          open={!!photosGroup}
+          onOpenChange={(open) => !open && setPhotosGroup(null)}
+          plantingId={photosGroup.representative.id}
+          plantingLabel={photosGroup.representative.nickname ?? photosGroup.representative.plant.commonName}
+        />
+      )}
       {editingGroup && (
         <PlantingFormDialog
           open={!!editingGroup}

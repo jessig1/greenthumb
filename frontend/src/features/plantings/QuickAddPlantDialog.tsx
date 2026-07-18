@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { XIcon } from 'lucide-react'
 import type { PlantingStatus } from '@/api/types'
@@ -25,6 +25,9 @@ import { findMatchingPlanting } from './duplicates'
 interface QuickAddPlantDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  // Pre-selects a plant when opened - used by the "Identify plant" flow to hand off its catalog
+  // match straight into this dialog's normal add-to-garden/container/inventory form.
+  initialPlantId?: string
 }
 
 interface DraftPlanting {
@@ -38,7 +41,7 @@ interface DraftPlanting {
 const STATUSES: PlantingStatus[] = ['PLANNED', 'PLANTED', 'HARVESTED', 'REMOVED']
 const NO_SELECTION = '__none__'
 
-export function QuickAddPlantDialog({ open, onOpenChange }: QuickAddPlantDialogProps) {
+export function QuickAddPlantDialog({ open, onOpenChange, initialPlantId }: QuickAddPlantDialogProps) {
   const { data: gardens } = useGardens()
   const { data: plants } = usePlants()
   const { data: existingPlantings } = useAllPlantings()
@@ -65,6 +68,12 @@ export function QuickAddPlantDialog({ open, onOpenChange }: QuickAddPlantDialogP
     setQuantity(1)
     setIsSubmitting(false)
   }
+
+  useEffect(() => {
+    if (open && initialPlantId) {
+      setPlantId(initialPlantId)
+    }
+  }, [open, initialPlantId])
 
   const handleDialogOpenChange = (next: boolean) => {
     onOpenChange(next)

@@ -76,6 +76,30 @@ public class Plant {
         // for JPA
     }
 
+    // Used when auto-adding a catalog entry from an AI plant identification - only the fields
+    // the AI can reliably supply are set here; everything else (description, watering interval,
+    // harvest info, image) is left null/false for a human to fill in later.
+    public Plant(
+            String commonName,
+            String scientificName,
+            PlantCategory category,
+            LightRequirement lightRequirement,
+            String lightNotes,
+            String soilNotes,
+            String wateringNotes,
+            String feedingNotes,
+            String pruningNotes) {
+        this.commonName = commonName;
+        this.scientificName = scientificName;
+        this.category = category;
+        this.lightRequirement = lightRequirement;
+        this.lightNotes = lightNotes;
+        this.soilNotes = soilNotes;
+        this.wateringNotes = wateringNotes;
+        this.feedingNotes = feedingNotes;
+        this.pruningNotes = pruningNotes;
+    }
+
     public UUID getId() {
         return id;
     }

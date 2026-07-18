@@ -29,6 +29,10 @@ start: ## Start the Spring Boot backend in the background (:8080)
 		if $(CURL) -sf http://localhost:8080/v3/api-docs >/dev/null 2>&1; then \
 			echo "backend already up: http://localhost:8080"; exit 0; \
 		fi; \
+		if [ -f .env.local ]; then \
+			echo "loading backend/.env.local"; \
+			set -a; . ./.env.local; set +a; \
+		fi; \
 		: > $(LOG_DIR)/backend.log; \
 		(./mvnw -q spring-boot:run >> $(LOG_DIR)/backend.log 2>&1 &); \
 		echo "waiting for backend to start (streaming $(LOG_DIR)/backend.log - a cold build can take a couple minutes)..."; \
@@ -53,6 +57,13 @@ stop: ## Stop the backend (and free :8080 if anything's still bound to it)
 
 restart: stop start ## Restart the backend
 
+# `start` sources backend/.env.local (gitignored - see .env.local.example for the template) via
+# "set -a; . ./.env.local; set +a" before launching, so its vars are plain exported shell env vars
+# that "(./mvnw spring-boot:run &)" inherits like any other - the app itself still just reads
+# ${ANTHROPIC_API_KEY:...} from application.properties exactly as it would from a real env var,
+# no dotenv library or app-level change involved. Running `./mvnw spring-boot:run` directly
+# (bypassing `make`) does NOT source it - export the vars yourself first in that case.
+#
 # This entire Makefile assumes a real POSIX shell (sh.exe) is reachable on PATH - `start`'s
 # "(... &)" backgrounding, its "sh -c '...'" polling loop, and every "./mvnw" all require one.
 # This Make build (ezwinports) only uses one when it can find it; otherwise every recipe line

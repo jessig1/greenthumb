@@ -26,4 +26,28 @@ public class PlantService {
         return plantRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Plant not found: " + id));
     }
+
+    @Transactional
+    public Plant createFromIdentification(
+            String commonName,
+            String scientificName,
+            PlantCategory category,
+            LightRequirement lightRequirement,
+            String lightNotes,
+            String soilNotes,
+            String wateringNotes,
+            String feedingNotes,
+            String pruningNotes) {
+        Plant plant = new Plant(
+                commonName,
+                scientificName,
+                category,
+                lightRequirement,
+                lightNotes,
+                soilNotes,
+                wateringNotes,
+                feedingNotes,
+                pruningNotes);
+        return plantRepository.save(plant);
+    }
 }

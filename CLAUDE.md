@@ -27,7 +27,8 @@ This file has quick facts and cross-cutting conventions only. For anything deepe
 - `frontend/` — React + TypeScript + Vite web app (has its own `Makefile` + `CLAUDE.md`)
 - `infra/` — Terraform (AWS) - not built yet
 - `scripts/` — helper scripts shared by the Makefiles (e.g. `stop-process.ps1`)
-- `docker-compose.yml` + `pg_hba.conf` — local Postgres for development
+- `docker-compose.yml` + `pg_hba.conf` — local Postgres + MinIO (S3-compatible photo storage) for
+  development
 - `Makefile` — root orchestrator for the whole stack (`make help` to see everything)
 - `package.json` (repo root) — **repo tooling only** (currently: `playwright-core`, for
   `.claude/skills/run-app`), not the app itself. The app's own dependencies are in
@@ -92,6 +93,17 @@ frontend. API docs at `http://localhost:8080/swagger-ui.html` once the backend i
 - **Cost guardrail**: never add a NAT Gateway to the Terraform without flagging it first — at
   ~$32/month it would roughly triple this project's AWS bill. App Runner's VPC Connector reaches
   Aurora privately without needing one.
+- **Photo storage and AI calls are real, but local-dev stand-ins (not S3/Bedrock yet).** Photos
+  (`backend/.../photo/`) go through a MinIO container (`docker-compose.yml`, S3-compatible) via
+  `StorageService`/`MinioStorageService`; AI features (`backend/.../ai/`: plant identification,
+  photo diagnosis, care suggestions, garden planning assistant) call the OpenAI API directly via
+  `AiClient`/`OpenAiClient` (model `gpt-5.4-nano`, chosen for near-$0 cost) using an
+  `OPENAI_API_KEY` env var — copy `backend/.env.local.example` to `backend/.env.local`
+  (gitignored) and `make backend-start`/`make up` load it automatically (see `backend/Makefile`'s
+  `start` target); it's a plain shell env var by the time the app sees it, not a dotenv library —
+  same seam a future Bedrock/real-S3 swap will use, and both
+  implementations are excluded from the backend `test` Spring profile in favor of fakes (see
+  `backend/CLAUDE.md`), so tests never need a live MinIO container or the real OpenAI API.
 
 ## Local-tooling gotchas (this machine/environment specifically)
 
@@ -121,9 +133,14 @@ knowing before assuming a tool is misbehaving:
 Phase 1 MVP backend and frontend are built and verified end-to-end (migrations, all CRUD
 endpoints with ownership enforcement, local email/password registration/login with a dashboard of
 the user's gardens, and the full garden → container → planting UI flow, including the plant
-catalog/care-guide screens). Not yet done: any AWS deployment — no Cognito pool, Aurora instance,
-or other cloud resources exist yet (see the auth note above for the local-vs-Cognito distinction).
+catalog/care-guide screens). Photo uploads (Garden/Container/PlantedPlant, via MinIO) and AI
+features (plant identification, photo-based diagnosis, text-only care suggestions, and a garden
+planning assistant, via the OpenAI API) are also built and verified end-to-end — see the photo
+storage/AI convention note above. Not yet done: any AWS deployment — no Cognito pool, Aurora
+instance, or other cloud resources exist yet (see the auth note above for the local-vs-Cognito
+distinction), and photo storage/AI calls are still hitting their local-dev stand-ins (MinIO,
+direct OpenAI API) rather than S3/Bedrock.
 
-Planned next: cloud deployment → photo uploads → calendar/reminders + AI garden planning/diagnosis
-(via Bedrock). The data model and infra choices were made so the calendar and AI features can be
-added later without reworking the MVP schema.
+Planned next: cloud deployment (S3, Bedrock swap-in behind the existing `StorageService`/`AiClient`
+seams, Cognito, Aurora) → calendar/reminders. The data model and infra choices were made so the
+calendar feature can be added later without reworking the schema.

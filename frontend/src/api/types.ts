@@ -185,3 +185,56 @@ export interface QuickAddPlantingRequest {
   status: PlantingStatus
   quantity: number
 }
+
+export type PhotoEntityType = 'GARDEN' | 'CONTAINER' | 'PLANTED_PLANT'
+
+export interface PhotoResponse {
+  id: string
+  entityType: PhotoEntityType
+  entityId: string
+  url: string
+  contentType: string
+  caption: string | null
+  createdAt: string
+}
+
+export interface IdentifyPlantResponse {
+  suggestedCommonName: string | null
+  suggestedScientificName: string | null
+  suggestedCategory: string | null
+  light: string | null
+  soil: string | null
+  watering: string | null
+  fertilizer: string | null
+  pruning: string | null
+  pestManagement: string | null
+  other: string | null
+  notes: string | null
+  matchedPlantId: string | null
+  addedToCatalog: boolean
+}
+
+export interface PlantIdentificationRecord {
+  id: string
+  suggestedCommonName: string | null
+  suggestedScientificName: string | null
+  matchedPlantId: string | null
+  addedToCatalog: boolean
+  createdAt: string
+}
+
+export interface PlantDiagnosisResponse {
+  id: string
+  plantedPlantId: string
+  photoId: string | null
+  resultText: string
+  createdAt: string
+}
+
+export interface PlanningAssistantRequest {
+  question: string
+}
+
+export interface PlanningAssistantResponse {
+  answer: string
+}
