@@ -32,11 +32,22 @@ public class Plant {
     private String description;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "life_cycle")
+    private PlantLifeCycle lifeCycle;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "care_difficulty")
+    private PlantCareDifficulty careDifficulty;
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "light_requirement", nullable = false)
     private LightRequirement lightRequirement;
 
     @Column(name = "light_notes")
     private String lightNotes;
+
+    @Column(name = "temperature_notes")
+    private String temperatureNotes;
 
     @Column(name = "watering_interval_days")
     private Integer wateringIntervalDays;
@@ -52,6 +63,9 @@ public class Plant {
 
     @Column(name = "pruning_notes")
     private String pruningNotes;
+
+    @Column(name = "toxicity_notes")
+    private String toxicityNotes;
 
     @Column(name = "is_harvestable", nullable = false)
     private boolean harvestable;
@@ -83,21 +97,29 @@ public class Plant {
             String commonName,
             String scientificName,
             PlantCategory category,
+            PlantLifeCycle lifeCycle,
+            PlantCareDifficulty careDifficulty,
             LightRequirement lightRequirement,
             String lightNotes,
+            String temperatureNotes,
             String soilNotes,
             String wateringNotes,
             String feedingNotes,
-            String pruningNotes) {
+            String pruningNotes,
+            String toxicityNotes) {
         this.commonName = commonName;
         this.scientificName = scientificName;
         this.category = category;
+        this.lifeCycle = lifeCycle;
+        this.careDifficulty = careDifficulty;
         this.lightRequirement = lightRequirement;
         this.lightNotes = lightNotes;
+        this.temperatureNotes = temperatureNotes;
         this.soilNotes = soilNotes;
         this.wateringNotes = wateringNotes;
         this.feedingNotes = feedingNotes;
         this.pruningNotes = pruningNotes;
+        this.toxicityNotes = toxicityNotes;
     }
 
     public UUID getId() {
@@ -120,12 +142,24 @@ public class Plant {
         return description;
     }
 
+    public PlantLifeCycle getLifeCycle() {
+        return lifeCycle;
+    }
+
+    public PlantCareDifficulty getCareDifficulty() {
+        return careDifficulty;
+    }
+
     public LightRequirement getLightRequirement() {
         return lightRequirement;
     }
 
     public String getLightNotes() {
         return lightNotes;
+    }
+
+    public String getTemperatureNotes() {
+        return temperatureNotes;
     }
 
     public Integer getWateringIntervalDays() {
@@ -146,6 +180,10 @@ public class Plant {
 
     public String getPruningNotes() {
         return pruningNotes;
+    }
+
+    public String getToxicityNotes() {
+        return toxicityNotes;
     }
 
     public boolean isHarvestable() {

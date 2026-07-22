@@ -1,5 +1,7 @@
 package com.greenthumb.backend.ai;
 
+import java.util.List;
+
 /**
  * Seam for the AI provider. {@link OpenAiClient} calls the OpenAI API directly for local
  * dev; a future {@code BedrockAiClient} implementing this same interface (IAM role auth) is the
@@ -7,8 +9,11 @@ package com.greenthumb.backend.ai;
  */
 public interface AiClient {
 
-    /** Best-guess species identification from a photo, with no existing planting context yet. */
-    String identifyPlant(byte[] imageBytes, String contentType);
+    /**
+     * Best-guess species identification from a photo. {@code gardens} (possibly empty) lets the
+     * model weigh in on which of the user's own gardens would suit the plant.
+     */
+    String identifyPlant(byte[] imageBytes, String contentType, List<GardenContext> gardens);
 
     /** Health assessment (watering, fertilizing, pruning, disease/pest) grounded in a photo. */
     String diagnosePlant(byte[] imageBytes, String contentType, PlantContext context);

@@ -45,6 +45,10 @@ export type PlantCategory = 'VEGETABLE' | 'HERB' | 'FLOWER' | 'FRUIT' | 'HOUSEPL
 
 export type LightRequirement = 'FULL_SUN' | 'PARTIAL_SHADE' | 'FULL_SHADE'
 
+export type PlantLifeCycle = 'ANNUAL' | 'PERENNIAL' | 'BIENNIAL'
+
+export type PlantCareDifficulty = 'EASY' | 'MEDIUM' | 'HARD'
+
 export type PlantingStatus = 'PLANNED' | 'PLANTED' | 'HARVESTED' | 'REMOVED'
 
 export interface AppUserResponse {
@@ -129,13 +133,17 @@ export interface PlantResponse {
   scientificName: string | null
   category: PlantCategory
   description: string | null
+  lifeCycle: PlantLifeCycle | null
+  careDifficulty: PlantCareDifficulty | null
   lightRequirement: LightRequirement
   lightNotes: string | null
+  temperatureNotes: string | null
   wateringIntervalDays: number | null
   wateringNotes: string | null
   soilNotes: string | null
   feedingNotes: string | null
   pruningNotes: string | null
+  toxicityNotes: string | null
   harvestable: boolean
   daysToMaturityMin: number | null
   daysToMaturityMax: number | null
@@ -202,16 +210,22 @@ export interface IdentifyPlantResponse {
   suggestedCommonName: string | null
   suggestedScientificName: string | null
   suggestedCategory: string | null
+  suggestedLifeCycle: string | null
+  suggestedCareDifficulty: string | null
   light: string | null
+  temperature: string | null
   soil: string | null
   watering: string | null
   fertilizer: string | null
   pruning: string | null
   pestManagement: string | null
+  toxicity: string | null
   other: string | null
   notes: string | null
   matchedPlantId: string | null
   addedToCatalog: boolean
+  recommendedGardenIds: string[]
+  gardenFitNotes: string | null
 }
 
 export interface PlantIdentificationRecord {

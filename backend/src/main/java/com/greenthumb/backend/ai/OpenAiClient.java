@@ -47,7 +47,17 @@ public class OpenAiClient implements AiClient {
     }
 
     @Override
-    public String identifyPlant(byte[] imageBytes, String contentType) {
+    public String identifyPlant(byte[] imageBytes, String contentType, List<GardenContext> gardens) {
+        String gardensBlock = gardens.isEmpty()
+                ? "The user has no gardens yet - leave RECOMMENDED_GARDENS and GARDEN_FIT_NOTES blank."
+                : """
+                  The user's gardens - weigh each one's light/climate against this plant's needs:
+                  %s
+                  For RECOMMENDED_GARDENS, list the exact names (comma-separated) of any gardens above \
+                  that would suit this plant well - leave blank if none are a good fit.
+                  """
+                        .formatted(describeGardens(gardens));
+
         String system =
                 """
                 You are a horticulture expert helping a gardening app user identify a plant from a photo.
@@ -56,22 +66,32 @@ public class OpenAiClient implements AiClient {
                 a plant clearly enough to guess anything at all, answer COMMON_NAME and SCIENTIFIC_NAME
                 with exactly the word "unknown" (not a sentence explaining why) and leave every other
                 line below blank.
+
+                %s
+
                 Respond with EXACTLY these labeled lines, one per line, no extra commentary. Keep each
                 line to 1 short sentence. Leave a line blank (nothing after the colon) if it truly
                 doesn't apply to this plant, rather than repeating another line's content.
                 COMMON_NAME: <common name, or exactly "unknown">
                 SCIENTIFIC_NAME: <scientific name, or exactly "unknown">
                 CATEGORY: <one of VEGETABLE, HERB, FLOWER, FRUIT, HOUSEPLANT, OTHER>
+                LIFE_CYCLE: <one of ANNUAL, PERENNIAL, BIENNIAL>
+                CARE_DIFFICULTY: <one of EASY, MEDIUM, HARD - how demanding this plant is to keep alive>
                 LIGHT_REQUIREMENT: <one of FULL_SUN, PARTIAL_SHADE, FULL_SHADE>
                 LIGHT: <light requirements>
+                TEMPERATURE: <ideal temperature range and frost tolerance>
                 SOIL: <soil type and drainage needs>
                 WATERING: <watering frequency and technique>
                 FERTILIZER: <feeding schedule and type>
                 PRUNING: <pruning or deadheading guidance>
                 PEST_MANAGEMENT: <common pests/diseases to watch for and how to manage them>
+                TOXICITY: <toxicity to pets/children and any other safety warnings - write "None known" if there are no concerns>
                 OTHER: <any other notable care tip that doesn't fit above, or blank>
+                RECOMMENDED_GARDENS: <comma-separated garden names from the list above, or blank>
+                GARDEN_FIT_NOTES: <1 sentence on why those gardens fit (or don't), or blank>
                 NOTES: <confidence level and any caveats>
-                """;
+                """
+                        .formatted(gardensBlock);
 
         return callVision(system, "What plant is this?", imageBytes, contentType);
     }
@@ -187,7 +207,15 @@ public class OpenAiClient implements AiClient {
 
     private String describe(GardenContext context) {
         StringBuilder sb = new StringBuilder();
+        appendIfPresent(sb, "Name", context.name());
         appendIfPresent(sb, "Garden type", context.type() == null ? null : context.type().name());
+        appendIfPresent(sb, "Light source", context.lightSource() == null ? null : context.lightSource().name());
+        appendIfPresent(
+                sb,
+                "Light hours/day",
+                context.lightHoursPerDay() == null ? null : context.lightHoursPerDay().toString());
+        appendIfPresent(
+                sb, "Light exposure", context.lightExposure() == null ? null : context.lightExposure().name());
         appendIfPresent(sb, "City", context.city());
         appendIfPresent(sb, "State", context.state());
         appendIfPresent(sb, "Zip code", context.zipCode());
@@ -196,6 +224,14 @@ public class OpenAiClient implements AiClient {
             appendIfPresent(sb, "Currently planted", String.join(", ", context.plantCommonNames()));
         } else {
             sb.append("Currently planted: nothing yet\n");
+        }
+        return sb.toString();
+    }
+
+    private String describeGardens(List<GardenContext> gardens) {
+        StringBuilder sb = new StringBuilder();
+        for (GardenContext garden : gardens) {
+            sb.append(describe(garden)).append('\n');
         }
         return sb.toString();
     }

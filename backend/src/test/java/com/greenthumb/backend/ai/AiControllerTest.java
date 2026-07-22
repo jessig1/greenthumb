@@ -2,6 +2,7 @@ package com.greenthumb.backend.ai;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -49,14 +50,19 @@ class AiControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.suggestedCommonName", is("Tomato")))
                 .andExpect(jsonPath("$.suggestedScientificName", is("Solanum lycopersicum")))
+                .andExpect(jsonPath("$.suggestedLifeCycle", is("ANNUAL")))
+                .andExpect(jsonPath("$.suggestedCareDifficulty", is("MEDIUM")))
                 .andExpect(jsonPath("$.light").isNotEmpty())
+                .andExpect(jsonPath("$.temperature").isNotEmpty())
                 .andExpect(jsonPath("$.soil").isNotEmpty())
                 .andExpect(jsonPath("$.watering").isNotEmpty())
                 .andExpect(jsonPath("$.fertilizer").isNotEmpty())
                 .andExpect(jsonPath("$.pruning").isNotEmpty())
                 .andExpect(jsonPath("$.pestManagement").isNotEmpty())
+                .andExpect(jsonPath("$.toxicity").isNotEmpty())
                 .andExpect(jsonPath("$.matchedPlantId").isNotEmpty())
-                .andExpect(jsonPath("$.addedToCatalog", is(false)));
+                .andExpect(jsonPath("$.addedToCatalog", is(false)))
+                .andExpect(jsonPath("$.recommendedGardenIds", hasSize(0)));
     }
 
     @Test
@@ -86,7 +92,39 @@ class AiControllerTest {
                 .andExpect(jsonPath("$.commonName", is("Ghost Orchid")))
                 .andExpect(jsonPath("$.scientificName", is("Dendrophylax lindenii")))
                 .andExpect(jsonPath("$.category", is("HOUSEPLANT")))
-                .andExpect(jsonPath("$.lightRequirement", is("PARTIAL_SHADE")));
+                .andExpect(jsonPath("$.lifeCycle", is("PERENNIAL")))
+                .andExpect(jsonPath("$.careDifficulty", is("HARD")))
+                .andExpect(jsonPath("$.lightRequirement", is("PARTIAL_SHADE")))
+                .andExpect(jsonPath("$.temperatureNotes").isNotEmpty())
+                .andExpect(jsonPath("$.toxicityNotes").isNotEmpty());
+    }
+
+    @Test
+    void identifyPlantRecommendsMatchingGardenByName() throws Exception {
+        String aliceToken = AuthTestSupport.registerAndLogin(mockMvc, objectMapper, "alice");
+        String gardenId = createGarden(aliceToken);
+
+        // FakeAiClient always "recommends" the first garden it's given, by name - this verifies
+        // the service correctly resolves that name back to the real garden id.
+        mockMvc.perform(multipart("/api/v1/ai/identify-plant")
+                        .file(new MockMultipartFile("file", "photo.jpg", "image/jpeg", "bytes".getBytes()))
+                        .with(AuthTestSupport.bearerToken(aliceToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.recommendedGardenIds", hasSize(1)))
+                .andExpect(jsonPath("$.recommendedGardenIds[0]", is(gardenId)))
+                .andExpect(jsonPath("$.gardenFitNotes").isNotEmpty());
+    }
+
+    @Test
+    void identifyPlantHasNoGardenRecommendationsWhenUserHasNoGardens() throws Exception {
+        String aliceToken = AuthTestSupport.registerAndLogin(mockMvc, objectMapper, "alice");
+
+        mockMvc.perform(multipart("/api/v1/ai/identify-plant")
+                        .file(new MockMultipartFile("file", "photo.jpg", "image/jpeg", "bytes".getBytes()))
+                        .with(AuthTestSupport.bearerToken(aliceToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.recommendedGardenIds", hasSize(0)))
+                .andExpect(jsonPath("$.gardenFitNotes", nullValue()));
     }
 
     @Test

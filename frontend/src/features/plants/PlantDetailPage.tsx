@@ -3,7 +3,7 @@ import { usePlant } from './api'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { lightRequirementLabel, plantCategoryLabel } from '@/lib/labels'
+import { lightRequirementLabel, plantCareDifficultyLabel, plantCategoryLabel, plantLifeCycleLabel } from '@/lib/labels'
 
 function CareSection({ title, value, notes }: { title: string; value?: string | null; notes: string | null }) {
   if (!value && !notes) return null
@@ -42,9 +42,13 @@ export function PlantDetailPage() {
       </Link>
 
       <div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-2xl font-semibold">{plant.commonName}</h1>
           <Badge variant="secondary">{plantCategoryLabel(plant.category)}</Badge>
+          {plant.lifeCycle && <Badge variant="outline">{plantLifeCycleLabel(plant.lifeCycle)}</Badge>}
+          {plant.careDifficulty && (
+            <Badge variant="outline">{plantCareDifficultyLabel(plant.careDifficulty)} care</Badge>
+          )}
         </div>
         {plant.scientificName && <p className="italic text-muted-foreground">{plant.scientificName}</p>}
         {plant.description && <p className="mt-2">{plant.description}</p>}
@@ -56,6 +60,7 @@ export function PlantDetailPage() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <CareSection title="Light" value={lightRequirementLabel(plant.lightRequirement)} notes={plant.lightNotes} />
+          <CareSection title="Temperature" notes={plant.temperatureNotes} />
           <CareSection
             title="Water"
             value={plant.wateringIntervalDays ? `Every ${plant.wateringIntervalDays} days` : null}
@@ -64,6 +69,7 @@ export function PlantDetailPage() {
           <CareSection title="Soil" notes={plant.soilNotes} />
           <CareSection title="Feeding" notes={plant.feedingNotes} />
           <CareSection title="Pruning" notes={plant.pruningNotes} />
+          <CareSection title="Toxicity / warnings" notes={plant.toxicityNotes} />
         </CardContent>
       </Card>
 

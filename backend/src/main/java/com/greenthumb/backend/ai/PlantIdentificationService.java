@@ -3,14 +3,20 @@ package com.greenthumb.backend.ai;
 import com.greenthumb.backend.ai.dto.IdentifyPlantResponse;
 import com.greenthumb.backend.common.auth.CurrentUserContext;
 import com.greenthumb.backend.common.web.InvalidRequestException;
+import com.greenthumb.backend.garden.Garden;
+import com.greenthumb.backend.garden.GardenService;
 import com.greenthumb.backend.identification.PlantIdentificationHistoryService;
 import com.greenthumb.backend.plant.LightRequirement;
 import com.greenthumb.backend.plant.Plant;
+import com.greenthumb.backend.plant.PlantCareDifficulty;
 import com.greenthumb.backend.plant.PlantCategory;
+import com.greenthumb.backend.plant.PlantLifeCycle;
 import com.greenthumb.backend.plant.PlantRepository;
 import com.greenthumb.backend.plant.PlantService;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -29,6 +35,7 @@ public class PlantIdentificationService {
     private final AiClient aiClient;
     private final PlantRepository plantRepository;
     private final PlantService plantService;
+    private final GardenService gardenService;
     private final PlantIdentificationHistoryService plantIdentificationHistoryService;
     private final CurrentUserContext currentUserContext;
 
@@ -36,11 +43,13 @@ public class PlantIdentificationService {
             AiClient aiClient,
             PlantRepository plantRepository,
             PlantService plantService,
+            GardenService gardenService,
             PlantIdentificationHistoryService plantIdentificationHistoryService,
             CurrentUserContext currentUserContext) {
         this.aiClient = aiClient;
         this.plantRepository = plantRepository;
         this.plantService = plantService;
+        this.gardenService = gardenService;
         this.plantIdentificationHistoryService = plantIdentificationHistoryService;
         this.currentUserContext = currentUserContext;
     }
@@ -57,7 +66,12 @@ public class PlantIdentificationService {
             throw new InvalidRequestException("Could not read uploaded file");
         }
 
-        String raw = aiClient.identifyPlant(bytes, file.getContentType());
+        UUID ownerId = currentUserContext.getAppUserId();
+        List<Garden> gardens = gardenService.findAllForOwner(ownerId);
+        List<GardenContext> gardenContexts =
+                gardens.stream().map(garden -> GardenContext.from(garden, List.of())).toList();
+
+        String raw = aiClient.identifyPlant(bytes, file.getContentType(), gardenContexts);
         Map<String, String> fields = parseLabeledLines(raw);
 
         String commonName = fields.get("COMMON_NAME");
@@ -77,33 +91,39 @@ public class PlantIdentificationService {
             }
         }
 
+        List<UUID> recommendedGardenIds = matchGardenNames(fields.get("RECOMMENDED_GARDENS"), gardens);
+
         plantIdentificationHistoryService.record(
-                currentUserContext.getAppUserId(),
-                commonName,
-                fields.get("SCIENTIFIC_NAME"),
-                matchedPlantId,
-                addedToCatalog);
+                ownerId, commonName, fields.get("SCIENTIFIC_NAME"), matchedPlantId, addedToCatalog);
 
         return new IdentifyPlantResponse(
                 commonName,
                 fields.get("SCIENTIFIC_NAME"),
                 fields.get("CATEGORY"),
+                fields.get("LIFE_CYCLE"),
+                fields.get("CARE_DIFFICULTY"),
                 fields.get("LIGHT"),
+                fields.get("TEMPERATURE"),
                 fields.get("SOIL"),
                 fields.get("WATERING"),
                 fields.get("FERTILIZER"),
                 fields.get("PRUNING"),
                 fields.get("PEST_MANAGEMENT"),
+                fields.get("TOXICITY"),
                 fields.get("OTHER"),
                 fields.get("NOTES"),
                 matchedPlantId,
-                addedToCatalog);
+                addedToCatalog,
+                recommendedGardenIds,
+                fields.get("GARDEN_FIT_NOTES"));
     }
 
     /**
      * Best-effort: only worth adding to the shared catalog when the AI gave both a usable name
      * and enum values we can trust (CATEGORY/LIGHT_REQUIREMENT must parse cleanly) - otherwise
      * leave the identification unmatched rather than pollute the catalog with a garbled row.
+     * LIFE_CYCLE/CARE_DIFFICULTY are best-effort on top of that - a bad guess there just leaves
+     * the column null rather than blocking catalog creation entirely.
      */
     private Plant tryAddToCatalog(String commonName, Map<String, String> fields) {
         PlantCategory category = parseEnum(PlantCategory.class, fields.get("CATEGORY"));
@@ -111,16 +131,44 @@ public class PlantIdentificationService {
         if (category == null || lightRequirement == null) {
             return null;
         }
+        PlantLifeCycle lifeCycle = parseEnum(PlantLifeCycle.class, fields.get("LIFE_CYCLE"));
+        PlantCareDifficulty careDifficulty = parseEnum(PlantCareDifficulty.class, fields.get("CARE_DIFFICULTY"));
+
         return plantService.createFromIdentification(
                 commonName,
                 fields.get("SCIENTIFIC_NAME"),
                 category,
+                lifeCycle,
+                careDifficulty,
                 lightRequirement,
                 fields.get("LIGHT"),
+                fields.get("TEMPERATURE"),
                 fields.get("SOIL"),
                 fields.get("WATERING"),
                 fields.get("FERTILIZER"),
-                fields.get("PRUNING"));
+                fields.get("PRUNING"),
+                fields.get("TOXICITY"));
+    }
+
+    // Best-effort, case-insensitive name matching against the user's own gardens - mirrors the
+    // plant-catalog name matching above. Unmatched/hallucinated names are silently dropped rather
+    // than failing the whole identification.
+    private List<UUID> matchGardenNames(String namesCsv, List<Garden> gardens) {
+        if (namesCsv == null || namesCsv.isBlank() || gardens.isEmpty()) {
+            return List.of();
+        }
+        Map<String, UUID> idByName = new HashMap<>();
+        for (Garden garden : gardens) {
+            idByName.put(garden.getName().trim().toLowerCase(), garden.getId());
+        }
+        List<UUID> matched = new ArrayList<>();
+        for (String name : namesCsv.split(",")) {
+            UUID id = idByName.get(name.trim().toLowerCase());
+            if (id != null && !matched.contains(id)) {
+                matched.add(id);
+            }
+        }
+        return matched;
     }
 
     private <E extends Enum<E>> E parseEnum(Class<E> type, String value) {

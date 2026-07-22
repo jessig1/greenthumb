@@ -1,5 +1,18 @@
 import { useState, type ChangeEvent, type ComponentType } from 'react'
-import { CircleCheck, Droplets, Info, Layers, Scissors, Sparkles, Sprout, Sun, Bug } from 'lucide-react'
+import {
+  AlertTriangle,
+  Bug,
+  CircleCheck,
+  Droplets,
+  Info,
+  Layers,
+  Scissors,
+  Sparkles,
+  Sprout,
+  Sun,
+  Thermometer,
+} from 'lucide-react'
+import { Link } from 'react-router'
 import { toast } from 'sonner'
 import type { IdentifyPlantResponse } from '@/api/types'
 import { Badge } from '@/components/ui/badge'
@@ -7,8 +20,9 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useGardens } from '@/features/gardens/api'
 import { QuickAddPlantDialog } from '@/features/plantings/QuickAddPlantDialog'
-import { plantCategoryLabel } from '@/lib/labels'
+import { plantCareDifficultyLabel, plantCategoryLabel, plantLifeCycleLabel } from '@/lib/labels'
 import { useIdentifyPlant } from './api'
 
 interface IdentifyPlantDialogProps {
@@ -37,8 +51,13 @@ function CareItem({ icon: Icon, label, value }: CareItemProps) {
 
 export function IdentifyPlantDialog({ open, onOpenChange }: IdentifyPlantDialogProps) {
   const identifyPlant = useIdentifyPlant()
+  const { data: gardens } = useGardens()
   const [result, setResult] = useState<IdentifyPlantResponse | null>(null)
   const [addOpen, setAddOpen] = useState(false)
+
+  const recommendedGardens = (result?.recommendedGardenIds ?? [])
+    .map((id) => gardens?.find((garden) => garden.id === id))
+    .filter((garden) => garden != null)
 
   const handleOpenChange = (next: boolean) => {
     onOpenChange(next)
@@ -101,11 +120,17 @@ export function IdentifyPlantDialog({ open, onOpenChange }: IdentifyPlantDialogP
                       <p className="text-sm text-muted-foreground italic">{result.suggestedScientificName}</p>
                     )}
                   </div>
-                  {result.suggestedCategory && (
-                    <Badge variant="secondary" className="shrink-0">
-                      {plantCategoryLabel(result.suggestedCategory)}
-                    </Badge>
-                  )}
+                  <div className="flex shrink-0 flex-wrap justify-end gap-1">
+                    {result.suggestedCategory && (
+                      <Badge variant="secondary">{plantCategoryLabel(result.suggestedCategory)}</Badge>
+                    )}
+                    {result.suggestedLifeCycle && (
+                      <Badge variant="outline">{plantLifeCycleLabel(result.suggestedLifeCycle)}</Badge>
+                    )}
+                    {result.suggestedCareDifficulty && (
+                      <Badge variant="outline">{plantCareDifficultyLabel(result.suggestedCareDifficulty)} care</Badge>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -128,23 +153,45 @@ export function IdentifyPlantDialog({ open, onOpenChange }: IdentifyPlantDialogP
                 </div>
 
                 {(result.light ||
+                  result.temperature ||
                   result.soil ||
                   result.watering ||
                   result.fertilizer ||
                   result.pruning ||
                   result.pestManagement ||
+                  result.toxicity ||
                   result.other) && (
                   <div>
                     <p className="mb-2 text-sm font-semibold">Care guide</p>
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       <CareItem icon={Sun} label="Light" value={result.light} />
+                      <CareItem icon={Thermometer} label="Temperature" value={result.temperature} />
                       <CareItem icon={Layers} label="Soil" value={result.soil} />
                       <CareItem icon={Droplets} label="Watering" value={result.watering} />
                       <CareItem icon={Sprout} label="Fertilizer" value={result.fertilizer} />
                       <CareItem icon={Scissors} label="Pruning" value={result.pruning} />
                       <CareItem icon={Bug} label="Pest management" value={result.pestManagement} />
+                      <CareItem icon={AlertTriangle} label="Toxicity / warnings" value={result.toxicity} />
                       <CareItem icon={Info} label="Other" value={result.other} />
                     </div>
+                  </div>
+                )}
+
+                {recommendedGardens.length > 0 && (
+                  <div>
+                    <p className="mb-2 text-sm font-semibold">Recommended for your gardens</p>
+                    <div className="flex flex-wrap gap-2">
+                      {recommendedGardens.map((garden) => (
+                        <Link key={garden.id} to={`/gardens/${garden.id}`} onClick={() => handleOpenChange(false)}>
+                          <Badge variant="outline" className="hover:bg-muted">
+                            {garden.name}
+                          </Badge>
+                        </Link>
+                      ))}
+                    </div>
+                    {result.gardenFitNotes && (
+                      <p className="mt-1.5 text-xs text-muted-foreground">{result.gardenFitNotes}</p>
+                    )}
                   </div>
                 )}
 

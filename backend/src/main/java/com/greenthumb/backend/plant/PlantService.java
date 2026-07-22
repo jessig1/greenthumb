@@ -32,22 +32,30 @@ public class PlantService {
             String commonName,
             String scientificName,
             PlantCategory category,
+            PlantLifeCycle lifeCycle,
+            PlantCareDifficulty careDifficulty,
             LightRequirement lightRequirement,
             String lightNotes,
+            String temperatureNotes,
             String soilNotes,
             String wateringNotes,
             String feedingNotes,
-            String pruningNotes) {
+            String pruningNotes,
+            String toxicityNotes) {
         Plant plant = new Plant(
                 commonName,
                 scientificName,
                 category,
+                lifeCycle,
+                careDifficulty,
                 lightRequirement,
                 lightNotes,
+                temperatureNotes,
                 soilNotes,
                 wateringNotes,
                 feedingNotes,
-                pruningNotes);
+                pruningNotes,
+                toxicityNotes);
         return plantRepository.save(plant);
     }
 }
