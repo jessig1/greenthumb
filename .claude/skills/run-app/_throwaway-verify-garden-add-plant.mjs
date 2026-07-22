@@ -83,6 +83,8 @@ async function main() {
     await page.locator('div[role="dialog"]').getByRole('button', { name: 'Add plants' }).click();
     await page.waitForSelector('text=Plant added', { timeout: 10000 });
     await page.waitForSelector('h2:has-text("Plant inventory")', { timeout: 10000 });
+    await page.click('button:has-text("Tomato")'); // expand the accordion row to reveal its location tags
+    await page.waitForTimeout(200);
     await shot('g03-after-add-no-container');
 
     const bodyText1 = await page.evaluate(() => document.body.innerText);
@@ -92,10 +94,9 @@ async function main() {
 
     console.log('--- verify container-scoped add still works ---');
     await page.click('button:has-text("New container")');
-    await page.waitForSelector('#name:not(#containerName)', { timeout: 10000 }).catch(() => {});
-    // ContainerFormDialog likely uses id="name" too; scope to the visible dialog.
+    await page.waitForSelector('div[role="dialog"] input#name', { timeout: 10000 });
     await page.locator('div[role="dialog"] input#name').fill('Test Bed');
-    await page.locator('div[role="dialog"] >> button[type="submit"], div[role="dialog"] >> button:has-text("Create")').first().click();
+    await page.locator('div[role="dialog"]').getByRole('button', { name: 'Add', exact: true }).click();
     await page.waitForSelector('text=Test Bed', { timeout: 10000 });
     await shot('g04-container-created');
 
@@ -105,7 +106,7 @@ async function main() {
     await page.waitForSelector('text=Add Plants', { timeout: 10000 });
     await page.click('text=Choose a plant');
     await page.click('[role="option"]:has-text("Basil")');
-    await page.locator('div[role="dialog"] >> button:has-text("Add Plants")').last().click();
+    await page.locator('div[role="dialog"]').getByRole('button', { name: 'Add Plants' }).click();
     await page.waitForSelector('text=Plant added', { timeout: 10000 });
     await shot('g05-container-scoped-add');
 
