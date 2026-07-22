@@ -59,10 +59,7 @@ async function main() {
     await page.click('button:has-text("Next")');
 
     await page.waitForSelector('#containerName', { timeout: 10000 });
-    await page.click('button:has-text("Next")'); // skip adding a container
-
-    await page.waitForSelector('text=Choose a plant', { timeout: 10000 });
-    await page.click('button:has-text("Next")'); // skip adding a plant
+    await page.click('button:has-text("Next")'); // skip adding a container - wizard skips the Plants step too since there's no container to assign one to
 
     await page.waitForSelector('button:has-text("Create garden")', { timeout: 10000 });
     await page.click('button:has-text("Create garden")');
@@ -71,17 +68,19 @@ async function main() {
     await shot('g01-garden-created-empty');
 
     console.log('--- add a plant directly to the garden, no container ---');
-    await page.click('button:has-text("Add plant")');
+    // "Add plant" also appears as a global header nav button - the page-scoped one (next to the
+    // "Plant inventory" heading) comes later in DOM order.
+    await page.locator('button:has-text("Add plant")').last().click();
     await page.waitForSelector('text=Add plants', { timeout: 10000 });
     // Garden field should be hidden/locked (no "Garden (optional)" label) since opened from the garden page.
     const gardenLabelVisible = await page.locator('text=Garden (optional)').count();
     if (gardenLabelVisible !== 0) throw new Error('Garden picker should be hidden when locked to this garden');
     await page.click('text=Choose a plant');
     await page.click('[role="option"]:has-text("Tomato")');
-    await page.click('button[type="submit"]:has-text("Add plants"), button:has-text("Add plants"):below(:text("Quantity"))').catch(() => {});
-    // The footer submit button also says "Add plants" - target it via the dialog footer specifically.
     await shot('g02-add-plant-dialog-filled');
-    await page.locator('div[role="dialog"] >> button:has-text("Add plants")').last().click();
+    // The dialog title and footer submit button both say "Add plants" - the footer one is a
+    // <button>, the title an <h2>, so a button-role locator disambiguates.
+    await page.locator('div[role="dialog"]').getByRole('button', { name: 'Add plants' }).click();
     await page.waitForSelector('text=Plant added', { timeout: 10000 });
     await page.waitForSelector('h2:has-text("Plant inventory")', { timeout: 10000 });
     await shot('g03-after-add-no-container');
