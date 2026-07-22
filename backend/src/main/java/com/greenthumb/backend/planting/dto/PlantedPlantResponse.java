@@ -27,7 +27,7 @@ public record PlantedPlantResponse(
 
     public static PlantedPlantResponse from(PlantedPlant plantedPlant) {
         Container container = plantedPlant.getContainer();
-        Garden garden = container == null ? null : container.getGarden();
+        Garden garden = plantedPlant.getGarden();
         return new PlantedPlantResponse(
                 plantedPlant.getId(),
                 container == null ? null : container.getId(),

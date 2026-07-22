@@ -119,6 +119,7 @@ export function AddPlantsDialog({ open, onOpenChange, containerId }: AddPlantsDi
         const match = findMatchingPlanting(working, {
           plantId: draft.plantId,
           containerId,
+          gardenId: null,
           status: draft.status,
           nickname: null,
           notes: null,

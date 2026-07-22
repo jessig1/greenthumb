@@ -37,15 +37,25 @@ export function groupDuplicatePlantings(plantings: PlantedPlantResponse[]): Plan
 
 // Finds an existing planting that a new add of the same plant/status/nickname/notes should be
 // folded into (by bumping its quantity) instead of creating a new row alongside it. Container is
-// matched separately since callers may or may not have it on the candidate list already.
+// matched separately since callers may or may not have it on the candidate list already. gardenId
+// only comes into play when there's no container to match on - a container's garden is implied by
+// the container itself, but two containerless plantings in different gardens must NOT merge.
 export function findMatchingPlanting(
   plantings: PlantedPlantResponse[],
-  criteria: { plantId: string; containerId: string | null; status: PlantingStatus; nickname: string | null; notes: string | null },
+  criteria: {
+    plantId: string
+    containerId: string | null
+    gardenId: string | null
+    status: PlantingStatus
+    nickname: string | null
+    notes: string | null
+  },
 ): PlantedPlantResponse | undefined {
   return plantings.find(
     (p) =>
       p.plant.id === criteria.plantId &&
       (p.containerId ?? null) === criteria.containerId &&
+      (criteria.containerId !== null || (p.gardenId ?? null) === criteria.gardenId) &&
       p.status === criteria.status &&
       (p.nickname ?? null) === (criteria.nickname ?? null) &&
       (p.notes ?? null) === (criteria.notes ?? null),

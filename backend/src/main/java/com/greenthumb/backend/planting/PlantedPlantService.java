@@ -4,6 +4,8 @@ import com.greenthumb.backend.common.web.InvalidRequestException;
 import com.greenthumb.backend.common.web.NotFoundException;
 import com.greenthumb.backend.container.Container;
 import com.greenthumb.backend.container.ContainerService;
+import com.greenthumb.backend.garden.Garden;
+import com.greenthumb.backend.garden.GardenService;
 import com.greenthumb.backend.plant.Plant;
 import com.greenthumb.backend.plant.PlantRepository;
 import com.greenthumb.backend.planting.dto.CreatePlantedPlantRequest;
@@ -22,16 +24,19 @@ public class PlantedPlantService {
 
     private final PlantedPlantRepository plantedPlantRepository;
     private final ContainerService containerService;
+    private final GardenService gardenService;
     private final PlantRepository plantRepository;
     private final AppUserRepository appUserRepository;
 
     public PlantedPlantService(
             PlantedPlantRepository plantedPlantRepository,
             ContainerService containerService,
+            GardenService gardenService,
             PlantRepository plantRepository,
             AppUserRepository appUserRepository) {
         this.plantedPlantRepository = plantedPlantRepository;
         this.containerService = containerService;
+        this.gardenService = gardenService;
         this.plantRepository = plantRepository;
         this.appUserRepository = appUserRepository;
     }
@@ -64,6 +69,7 @@ public class PlantedPlantService {
         PlantedPlant plantedPlant = new PlantedPlant(
                 appUserRepository.getReferenceById(ownerId),
                 container,
+                container.getGarden(),
                 plant,
                 request.nickname(),
                 request.quantity() == null ? 1 : request.quantity(),
@@ -74,14 +80,24 @@ public class PlantedPlantService {
         return plantedPlantRepository.save(plantedPlant);
     }
 
-    /** Dashboard "quick add": garden/container are optional - a container may be assigned up front via containerId. */
+    /** Dashboard/garden "quick add": garden/container are optional - either may be assigned up front. */
     @Transactional
     public PlantedPlant quickAdd(UUID ownerId, QuickAddPlantingRequest request) {
         Plant plant = plantRepository.findById(request.plantId())
                 .orElseThrow(() -> new NotFoundException("Plant not found: " + request.plantId()));
-        Container container = request.containerId() == null
-                ? null
-                : containerService.getForOwner(request.containerId(), ownerId);
+
+        Container container = null;
+        Garden garden = null;
+        if (request.containerId() != null) {
+            container = containerService.getForOwner(request.containerId(), ownerId);
+            garden = container.getGarden();
+            if (request.gardenId() != null && !request.gardenId().equals(garden.getId())) {
+                throw new InvalidRequestException(
+                        "containerId " + request.containerId() + " does not belong to gardenId " + request.gardenId());
+            }
+        } else if (request.gardenId() != null) {
+            garden = gardenService.getForOwner(request.gardenId(), ownerId);
+        }
 
         // The quick-add form doesn't collect a planted date, but the DB requires one once status
         // moves past PLANNED - default to today rather than asking the user for a field they
@@ -91,6 +107,7 @@ public class PlantedPlantService {
         PlantedPlant plantedPlant = new PlantedPlant(
                 appUserRepository.getReferenceById(ownerId),
                 container,
+                garden,
                 plant,
                 null,
                 request.quantity(),

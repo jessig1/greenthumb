@@ -130,7 +130,7 @@ class PlantedPlantControllerTest {
                         .with(AuthTestSupport.bearerToken(aliceToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new QuickAddPlantingRequest(plantId, null, PlantingStatus.PLANNED, 3))))
+                                new QuickAddPlantingRequest(plantId, null, null, PlantingStatus.PLANNED, 3))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.containerId").doesNotExist())
                 .andExpect(jsonPath("$.quantity", is(3)))
@@ -150,7 +150,7 @@ class PlantedPlantControllerTest {
                         .with(AuthTestSupport.bearerToken(aliceToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new QuickAddPlantingRequest(plantId, null, PlantingStatus.PLANTED, 1))))
+                                new QuickAddPlantingRequest(plantId, null, null, PlantingStatus.PLANTED, 1))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.plantedDate", is(LocalDate.now().toString())));
     }
@@ -165,7 +165,7 @@ class PlantedPlantControllerTest {
                         .with(AuthTestSupport.bearerToken(aliceToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new QuickAddPlantingRequest(plantId, null, PlantingStatus.PLANNED, 1))))
+                                new QuickAddPlantingRequest(plantId, null, null, PlantingStatus.PLANNED, 1))))
                 .andExpect(status().isCreated())
                 .andReturn()
                 .getResponse()
@@ -190,7 +190,7 @@ class PlantedPlantControllerTest {
                         .with(AuthTestSupport.bearerToken(aliceToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new QuickAddPlantingRequest(plantId, UUID.fromString(containerId), PlantingStatus.PLANNED, 2))))
+                                new QuickAddPlantingRequest(plantId, UUID.fromString(containerId), null, PlantingStatus.PLANNED, 2))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.containerId", is(containerId)))
                 .andExpect(jsonPath("$.containerName", is("Container")))
@@ -211,14 +211,14 @@ class PlantedPlantControllerTest {
                         .with(AuthTestSupport.bearerToken(aliceToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new QuickAddPlantingRequest(plantId, UUID.fromString(containerId), PlantingStatus.PLANNED, 2))))
+                                new QuickAddPlantingRequest(plantId, UUID.fromString(containerId), null, PlantingStatus.PLANNED, 2))))
                 .andExpect(status().isCreated());
 
         mockMvc.perform(post("/api/v1/plantings")
                         .with(AuthTestSupport.bearerToken(aliceToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new QuickAddPlantingRequest(plantId, null, PlantingStatus.PLANNED, 1))))
+                                new QuickAddPlantingRequest(plantId, null, null, PlantingStatus.PLANNED, 1))))
                 .andExpect(status().isCreated());
 
         mockMvc.perform(get("/api/v1/plantings").with(AuthTestSupport.bearerToken(aliceToken)))
@@ -237,7 +237,54 @@ class PlantedPlantControllerTest {
                         .with(AuthTestSupport.bearerToken(bobToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new QuickAddPlantingRequest(
-                                plantId, UUID.fromString(aliceContainerId), PlantingStatus.PLANNED, 1))))
+                                plantId, UUID.fromString(aliceContainerId), null, PlantingStatus.PLANNED, 1))))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void quickAddWithGardenIdAssignsToThatGardenWithoutContainer() throws Exception {
+        String aliceToken = AuthTestSupport.registerAndLogin(mockMvc, objectMapper, "alice");
+        String gardenId = createGarden(aliceToken);
+        UUID plantId = anySeededPlantId();
+
+        mockMvc.perform(post("/api/v1/plantings")
+                        .with(AuthTestSupport.bearerToken(aliceToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new QuickAddPlantingRequest(plantId, null, UUID.fromString(gardenId), PlantingStatus.PLANNED, 1))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.containerId").doesNotExist())
+                .andExpect(jsonPath("$.gardenId", is(gardenId)))
+                .andExpect(jsonPath("$.gardenName", is("Garden")));
+    }
+
+    @Test
+    void quickAddWithMismatchedContainerAndGardenIsRejected() throws Exception {
+        String aliceToken = AuthTestSupport.registerAndLogin(mockMvc, objectMapper, "alice");
+        String containerId = createContainer(aliceToken);
+        String otherGardenId = createGarden(aliceToken);
+        UUID plantId = anySeededPlantId();
+
+        mockMvc.perform(post("/api/v1/plantings")
+                        .with(AuthTestSupport.bearerToken(aliceToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new QuickAddPlantingRequest(
+                                plantId, UUID.fromString(containerId), UUID.fromString(otherGardenId), PlantingStatus.PLANNED, 1))))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void quickAddWithOtherUsersGardenIdIsRejected() throws Exception {
+        String aliceToken = AuthTestSupport.registerAndLogin(mockMvc, objectMapper, "alice");
+        String bobToken = AuthTestSupport.registerAndLogin(mockMvc, objectMapper, "bob");
+        String aliceGardenId = createGarden(aliceToken);
+        UUID plantId = anySeededPlantId();
+
+        mockMvc.perform(post("/api/v1/plantings")
+                        .with(AuthTestSupport.bearerToken(bobToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new QuickAddPlantingRequest(
+                                plantId, null, UUID.fromString(aliceGardenId), PlantingStatus.PLANNED, 1))))
                 .andExpect(status().isNotFound());
     }
 
@@ -245,7 +292,7 @@ class PlantedPlantControllerTest {
         return plantRepository.findAllByOrderByCommonName().get(0).getId();
     }
 
-    private String createContainer(String token) throws Exception {
+    private String createGarden(String token) throws Exception {
         String gardenResponse = mockMvc.perform(post("/api/v1/gardens")
                         .with(AuthTestSupport.bearerToken(token))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -267,7 +314,11 @@ class PlantedPlantControllerTest {
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
-        String gardenId = objectMapper.readTree(gardenResponse).get("id").asText();
+        return objectMapper.readTree(gardenResponse).get("id").asText();
+    }
+
+    private String createContainer(String token) throws Exception {
+        String gardenId = createGarden(token);
 
         String containerResponse = mockMvc.perform(post("/api/v1/gardens/" + gardenId + "/containers")
                         .with(AuthTestSupport.bearerToken(token))

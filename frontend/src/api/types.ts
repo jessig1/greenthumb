@@ -190,6 +190,7 @@ export interface UpdatePlantedPlantRequest {
 export interface QuickAddPlantingRequest {
   plantId: string
   containerId: string | null
+  gardenId: string | null
   status: PlantingStatus
   quantity: number
 }

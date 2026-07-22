@@ -28,6 +28,9 @@ interface QuickAddPlantDialogProps {
   // Pre-selects a plant when opened - used by the "Identify plant" flow to hand off its catalog
   // match straight into this dialog's normal add-to-garden/container/inventory form.
   initialPlantId?: string
+  // Pins the Garden field to a specific garden and hides the picker - used when opened from a
+  // garden's own page, where the garden is already implied by context.
+  lockedGardenId?: string
 }
 
 interface DraftPlanting {
@@ -41,7 +44,7 @@ interface DraftPlanting {
 const STATUSES: PlantingStatus[] = ['PLANNED', 'PLANTED', 'HARVESTED', 'REMOVED']
 const NO_SELECTION = '__none__'
 
-export function QuickAddPlantDialog({ open, onOpenChange, initialPlantId }: QuickAddPlantDialogProps) {
+export function QuickAddPlantDialog({ open, onOpenChange, initialPlantId, lockedGardenId }: QuickAddPlantDialogProps) {
   const { data: gardens } = useGardens()
   const { data: plants } = usePlants()
   const { data: existingPlantings } = useAllPlantings()
@@ -49,7 +52,7 @@ export function QuickAddPlantDialog({ open, onOpenChange, initialPlantId }: Quic
   const updatePlanting = useUpdateInventoryPlanting()
   const plantOptions = plants?.map((plant) => ({ value: plant.id, label: plant.commonName })) ?? []
 
-  const [gardenId, setGardenId] = useState('')
+  const [gardenId, setGardenId] = useState(lockedGardenId ?? '')
   const { data: containers } = useContainers(gardenId)
   const [containerId, setContainerId] = useState('')
 
@@ -60,7 +63,7 @@ export function QuickAddPlantDialog({ open, onOpenChange, initialPlantId }: Quic
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const resetAll = () => {
-    setGardenId('')
+    setGardenId(lockedGardenId ?? '')
     setContainerId('')
     setDrafts([])
     setPlantId('')
@@ -74,6 +77,12 @@ export function QuickAddPlantDialog({ open, onOpenChange, initialPlantId }: Quic
       setPlantId(initialPlantId)
     }
   }, [open, initialPlantId])
+
+  useEffect(() => {
+    if (open && lockedGardenId) {
+      setGardenId(lockedGardenId)
+    }
+  }, [open, lockedGardenId])
 
   const handleDialogOpenChange = (next: boolean) => {
     onOpenChange(next)
@@ -122,6 +131,7 @@ export function QuickAddPlantDialog({ open, onOpenChange, initialPlantId }: Quic
     const total = allDrafts.length
     const remaining = [...allDrafts]
     const targetContainerId = containerId || null
+    const targetGardenId = gardenId || null
     // Snapshot of the caller's plantings, kept in sync locally as drafts are submitted so that
     // adding the same plant/status twice in one batch also merges into a single row rather than
     // the second draft missing the first draft's not-yet-refetched update.
@@ -133,6 +143,7 @@ export function QuickAddPlantDialog({ open, onOpenChange, initialPlantId }: Quic
         const match = findMatchingPlanting(working, {
           plantId: draft.plantId,
           containerId: targetContainerId,
+          gardenId: targetGardenId,
           status: draft.status,
           nickname: null,
           notes: null,
@@ -156,6 +167,7 @@ export function QuickAddPlantDialog({ open, onOpenChange, initialPlantId }: Quic
           const created = await quickAddPlanting.mutateAsync({
             plantId: draft.plantId,
             containerId: targetContainerId,
+            gardenId: targetGardenId,
             status: draft.status,
             quantity: draft.quantity,
           })
@@ -183,23 +195,25 @@ export function QuickAddPlantDialog({ open, onOpenChange, initialPlantId }: Quic
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-2">
-              <Label>Garden (optional)</Label>
-              <Select value={gardenId || NO_SELECTION} onValueChange={handleGardenChange}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NO_SELECTION}>No garden yet</SelectItem>
-                  {gardens?.map((garden) => (
-                    <SelectItem key={garden.id} value={garden.id}>
-                      {garden.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className={lockedGardenId ? 'grid grid-cols-1 gap-4' : 'grid grid-cols-2 gap-4'}>
+            {!lockedGardenId && (
+              <div className="flex flex-col gap-2">
+                <Label>Garden (optional)</Label>
+                <Select value={gardenId || NO_SELECTION} onValueChange={handleGardenChange}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_SELECTION}>No garden yet</SelectItem>
+                    {gardens?.map((garden) => (
+                      <SelectItem key={garden.id} value={garden.id}>
+                        {garden.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="flex flex-col gap-2">
               <Label>Container (optional)</Label>
               <Select

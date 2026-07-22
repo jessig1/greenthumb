@@ -7,6 +7,7 @@ import { GardenFormDialog } from './GardenFormDialog'
 import { useContainers } from '@/features/containers/api'
 import { ContainerFormDialog } from '@/features/containers/ContainerFormDialog'
 import { PlantInventoryList } from '@/features/plantings/PlantInventoryList'
+import { QuickAddPlantDialog } from '@/features/plantings/QuickAddPlantDialog'
 import { useAllPlantings, useDeleteInventoryPlanting } from '@/features/plantings/api'
 import { buildGardenInventory } from '@/features/plantings/inventory'
 import { usePhotos, useDeletePhoto } from '@/features/photos/api'
@@ -46,6 +47,7 @@ export function GardenDetailPage() {
 
   const [editOpen, setEditOpen] = useState(false)
   const [createContainerOpen, setCreateContainerOpen] = useState(false)
+  const [addPlantOpen, setAddPlantOpen] = useState(false)
   const [uploadPhotoOpen, setUploadPhotoOpen] = useState(false)
   const [showMoreDetails, setShowMoreDetails] = useState(false)
 
@@ -145,19 +147,30 @@ export function GardenDetailPage() {
         </CardContent>
       </Card>
 
-      {inventory.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-medium">Plant inventory</h2>
-            <span className="text-sm text-muted-foreground">{totalQuantity} plants total</span>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-medium">Plant inventory</h2>
+          <div className="flex items-center gap-3">
+            {inventory.length > 0 && (
+              <span className="text-sm text-muted-foreground">{totalQuantity} plants total</span>
+            )}
+            <Button size="sm" onClick={() => setAddPlantOpen(true)}>
+              Add plant
+            </Button>
           </div>
+        </div>
+        {inventory.length > 0 ? (
           <Card>
             <CardContent className="py-1">
               <PlantInventoryList inventory={inventory} onRemoveTag={handleRemoveTag} />
             </CardContent>
           </Card>
-        </div>
-      )}
+        ) : (
+          <p className="text-muted-foreground">
+            No plants yet. Add one directly to this garden, or to one of its containers.
+          </p>
+        )}
+      </div>
 
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
@@ -202,6 +215,7 @@ export function GardenDetailPage() {
 
       <GardenFormDialog open={editOpen} onOpenChange={setEditOpen} garden={garden} />
       <ContainerFormDialog open={createContainerOpen} onOpenChange={setCreateContainerOpen} gardenId={garden.id} />
+      <QuickAddPlantDialog open={addPlantOpen} onOpenChange={setAddPlantOpen} lockedGardenId={garden.id} />
       <PhotoUploadDialog
         open={uploadPhotoOpen}
         onOpenChange={setUploadPhotoOpen}

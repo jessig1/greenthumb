@@ -1,6 +1,7 @@
 package com.greenthumb.backend.planting;
 
 import com.greenthumb.backend.container.Container;
+import com.greenthumb.backend.garden.Garden;
 import com.greenthumb.backend.plant.Plant;
 import com.greenthumb.backend.user.AppUser;
 import jakarta.persistence.Column;
@@ -31,6 +32,13 @@ public class PlantedPlant {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "container_id")
     private Container container;
+
+    // Tracked directly (not just derived via container.getGarden()) so a planting can be scoped to
+    // a garden without picking a container yet. Always mirrors container.getGarden() when a
+    // container is present.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "garden_id")
+    private Garden garden;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "plant_id", nullable = false)
@@ -74,6 +82,7 @@ public class PlantedPlant {
     public PlantedPlant(
             AppUser owner,
             Container container,
+            Garden garden,
             Plant plant,
             String nickname,
             int quantity,
@@ -83,6 +92,7 @@ public class PlantedPlant {
             String notes) {
         this.owner = owner;
         this.container = container;
+        this.garden = garden;
         this.plant = plant;
         this.nickname = nickname;
         this.quantity = quantity;
@@ -98,6 +108,10 @@ public class PlantedPlant {
 
     public Container getContainer() {
         return container;
+    }
+
+    public Garden getGarden() {
+        return garden;
     }
 
     public Plant getPlant() {

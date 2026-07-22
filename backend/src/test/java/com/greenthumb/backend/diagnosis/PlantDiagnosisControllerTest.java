@@ -119,7 +119,7 @@ class PlantDiagnosisControllerTest {
                         .with(AuthTestSupport.bearerToken(token))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new QuickAddPlantingRequest(plantId, null, PlantingStatus.PLANNED, 1))))
+                                new QuickAddPlantingRequest(plantId, null, null, PlantingStatus.PLANNED, 1))))
                 .andExpect(status().isCreated())
                 .andReturn()
                 .getResponse()
