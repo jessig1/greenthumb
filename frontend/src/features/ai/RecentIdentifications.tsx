@@ -17,12 +17,15 @@ export function RecentIdentifications() {
   if (!identifications || identifications.length === 0) return null
 
   return (
-    <div className="flex flex-col gap-2">
-      <h2 className="text-lg font-medium">Recent activity</h2>
+    <section className="flex flex-col gap-4">
+      <div>
+        <p className="eyebrow">From plant scanner</p>
+        <h2 className="section-title mt-1">Recent activity</h2>
+      </div>
       <Card>
-        <CardContent className="flex flex-col divide-y py-1">
+        <CardContent className="flex flex-col divide-y divide-border/60 py-0">
           {identifications.map((item) => (
-            <div key={item.id} className="flex items-center justify-between gap-3 py-2.5 first:pt-1 last:pb-1">
+            <div key={item.id} className="flex items-center justify-between gap-3 py-3.5">
               <div className="flex min-w-0 items-center gap-2.5">
                 {item.addedToCatalog ? (
                   <Sparkles className="h-4 w-4 shrink-0 text-primary" />
@@ -55,6 +58,6 @@ export function RecentIdentifications() {
           ))}
         </CardContent>
       </Card>
-    </div>
+    </section>
   )
 }

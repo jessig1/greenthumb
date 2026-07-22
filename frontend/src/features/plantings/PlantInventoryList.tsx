@@ -28,12 +28,12 @@ export function PlantInventoryList({
       {inventory.map((item) => (
         <AccordionItem key={item.plantId} value={item.plantId}>
           <AccordionTrigger>
-            <div className="flex flex-1 items-center justify-between gap-2 pr-2">
-              <div className="flex items-center gap-2">
-                <span>{item.plantName}</span>
-                <Badge variant="secondary">{plantCategoryLabel(item.plant.category)}</Badge>
+            <div className="flex min-w-0 flex-1 items-center justify-between gap-2 pr-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="truncate font-semibold">{item.plantName}</span>
+                <Badge variant="secondary" className="hidden sm:inline-flex">{plantCategoryLabel(item.plant.category)}</Badge>
               </div>
-              <Badge variant="secondary">{item.totalQuantity} total</Badge>
+              <Badge variant="secondary" className="shrink-0">{item.totalQuantity} total</Badge>
             </div>
           </AccordionTrigger>
           <AccordionContent className="flex flex-col gap-4">
@@ -43,7 +43,7 @@ export function PlantInventoryList({
                 {item.tags.map((tag) => (
                   <div
                     key={`${tag.label}::${tag.status}`}
-                    className="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs"
+                    className="flex max-w-full items-center gap-1.5 rounded-full border border-border/70 bg-muted/25 px-2.5 py-1.5 text-xs"
                   >
                     {tag.gardenId && tag.containerId ? (
                       <Link

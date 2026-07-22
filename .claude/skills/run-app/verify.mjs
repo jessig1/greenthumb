@@ -58,14 +58,14 @@ async function main() {
     await page.fill('#email', TEST_EMAIL);
     await page.fill('#password', TEST_PASSWORD);
     await page.click('button[type="submit"]:has-text("Create account")');
-    await page.waitForSelector('h1:has-text("Your gardens")', { timeout: 10000 });
+    await page.waitForSelector('h2:has-text("Gardens")', { timeout: 10000 });
     await shot('00-dashboard-empty');
     authToken = await page.evaluate(() => localStorage.getItem('greenthumb.authToken'));
     if (!authToken) throw new Error('No auth token found in localStorage after registration');
 
     console.log('--- plant catalog renders ---');
     await page.goto(`${FRONTEND_URL}/plants`, { waitUntil: 'networkidle' });
-    await page.waitForSelector('h1:has-text("Plant catalog")');
+    await page.waitForSelector('h1:has-text("Plant library")');
     await page.waitForSelector('text=Tomato', { timeout: 10000 });
     await shot('01-plant-catalog');
 
@@ -94,7 +94,7 @@ async function main() {
     await page.waitForSelector('text=Choose a plant', { timeout: 10000 });
     await page.click('text=Choose a plant');
     await page.click('[role="option"]:has-text("Tomato")');
-    await page.click('button:has-text("Add plant")');
+    await page.click('button:visible:has-text("Add plant")');
     await page.waitForSelector('text=1x Tomato', { timeout: 10000 });
 
     await page.click('button:has-text("Next")');
