@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
+import { Sparkles } from 'lucide-react'
 import type { PlantedPlantResponse } from '@/api/types'
 import { useDeleteGarden, useGarden } from './api'
 import { GardenFormDialog } from './GardenFormDialog'
@@ -92,14 +93,17 @@ export function GardenDetailPage() {
         ← Back to gardens
       </Link>
 
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-semibold">{garden.name}</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="text-2xl font-semibold tracking-tight">{garden.name}</h1>
           <Badge variant="secondary">{gardenTypeLabel(garden.type)}</Badge>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link to={`/gardens/${garden.id}/assistant`}>
-            <Button variant="outline">Planning assistant</Button>
+            <Button variant="outline">
+              <Sparkles data-icon="inline-start" />
+              Planning assistant
+            </Button>
           </Link>
           <Button variant="outline" onClick={() => setEditOpen(true)}>
             Edit
@@ -148,7 +152,7 @@ export function GardenDetailPage() {
       </Card>
 
       <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-medium">Plant inventory</h2>
           <div className="flex items-center gap-3">
             {inventory.length > 0 && (
@@ -183,7 +187,7 @@ export function GardenDetailPage() {
       </div>
 
       <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-medium">Containers</h2>
           <Button onClick={() => setCreateContainerOpen(true)}>New container</Button>
         </div>
@@ -191,7 +195,16 @@ export function GardenDetailPage() {
         {containersLoading ? (
           <Skeleton className="h-24" />
         ) : containers?.length === 0 ? (
-          <p className="text-muted-foreground">No containers yet. Add a raised bed, pot, or plot.</p>
+          <Card className="border-dashed">
+            <CardContent className="flex flex-col items-center gap-3 py-8 text-center">
+              <p className="text-sm text-muted-foreground">
+                No containers yet. Add a raised bed, pot, or plot.
+              </p>
+              <Button size="sm" variant="outline" onClick={() => setCreateContainerOpen(true)}>
+                New container
+              </Button>
+            </CardContent>
+          </Card>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {containers?.map((container) => (

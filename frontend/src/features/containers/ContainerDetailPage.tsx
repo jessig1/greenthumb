@@ -12,6 +12,7 @@ import { usePhotos, useDeletePhoto } from '@/features/photos/api'
 import { PhotoGallery } from '@/features/photos/PhotoGallery'
 import { PhotoUploadDialog } from '@/features/photos/PhotoUploadDialog'
 import { PlantDiagnosisDialog } from '@/features/ai/PlantDiagnosisDialog'
+import { Sprout } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -90,10 +91,10 @@ export function ContainerDetailPage() {
         ← Back to garden
       </Link>
 
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-semibold">{container.name}</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-semibold tracking-tight">{container.name}</h1>
             <Badge variant="secondary">{containerTypeLabel(container.containerType)}</Badge>
           </div>
           {container.sizeDescription && <p className="mt-1 text-muted-foreground">{container.sizeDescription}</p>}
@@ -103,7 +104,7 @@ export function ContainerDetailPage() {
             </p>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => setEditContainerOpen(true)}>
             Edit
           </Button>
@@ -135,7 +136,19 @@ export function ContainerDetailPage() {
         {plantingsLoading ? (
           <Skeleton className="h-24" />
         ) : groups.length === 0 ? (
-          <p className="text-muted-foreground">Nothing planned here yet.</p>
+          <Card className="border-dashed">
+            <CardContent className="flex flex-col items-center gap-3 py-8 text-center">
+              <div className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Sprout className="size-5" />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Nothing planned here yet. Add a plant to get started.
+              </p>
+              <Button size="sm" onClick={() => setAddPlantsOpen(true)}>
+                Add plants
+              </Button>
+            </CardContent>
+          </Card>
         ) : (
           <div className="flex flex-col gap-6">
             {STATUS_SECTION_ORDER.filter((status) => groupsByStatus.has(status)).map((status) => (

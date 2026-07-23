@@ -1,6 +1,7 @@
 import { useForm } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
+import { Sprout } from 'lucide-react'
 import { useRegister } from './api'
 import { useAuth } from './AuthContext'
 import { Button } from '@/components/ui/button'
@@ -28,10 +29,16 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-svh items-center justify-center px-4">
+    <div className="flex min-h-svh flex-col items-center justify-center gap-6 px-4 py-8">
+      <div className="flex items-center gap-2.5 font-semibold">
+        <span className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+          <Sprout className="size-6" />
+        </span>
+        <span className="text-2xl tracking-tight">GreenThumb</span>
+      </div>
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-center text-xl">🌱 Create your GreenThumb account</CardTitle>
+          <CardTitle className="text-center text-lg">Create your account</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">

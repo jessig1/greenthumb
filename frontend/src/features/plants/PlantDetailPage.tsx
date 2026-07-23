@@ -1,17 +1,45 @@
 import { Link, useLocation, useParams } from 'react-router'
+import {
+  CalendarDays,
+  Droplets,
+  Layers,
+  Scissors,
+  Sparkles,
+  Sun,
+  Thermometer,
+  TriangleAlert,
+} from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { usePlant } from './api'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { lightRequirementLabel, plantCareDifficultyLabel, plantCategoryLabel, plantLifeCycleLabel } from '@/lib/labels'
 
-function CareSection({ title, value, notes }: { title: string; value?: string | null; notes: string | null }) {
+function CareSection({
+  title,
+  icon: Icon,
+  value,
+  notes,
+}: {
+  title: string
+  icon?: LucideIcon
+  value?: string | null
+  notes: string | null
+}) {
   if (!value && !notes) return null
   return (
-    <div>
-      <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
-      {value && <p className="font-medium">{value}</p>}
-      {notes && <p className="text-sm">{notes}</p>}
+    <div className="flex gap-2.5">
+      {Icon && (
+        <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+          <Icon className="size-4" />
+        </span>
+      )}
+      <div className="min-w-0">
+        <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
+        {value && <p className="font-medium">{value}</p>}
+        {notes && <p className="text-sm">{notes}</p>}
+      </div>
     </div>
   )
 }
@@ -43,7 +71,7 @@ export function PlantDetailPage() {
 
       <div>
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-2xl font-semibold">{plant.commonName}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{plant.commonName}</h1>
           <Badge variant="secondary">{plantCategoryLabel(plant.category)}</Badge>
           {plant.lifeCycle && <Badge variant="outline">{plantLifeCycleLabel(plant.lifeCycle)}</Badge>}
           {plant.careDifficulty && (
@@ -58,18 +86,24 @@ export function PlantDetailPage() {
         <CardHeader>
           <CardTitle>Care guide</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <CareSection title="Light" value={lightRequirementLabel(plant.lightRequirement)} notes={plant.lightNotes} />
-          <CareSection title="Temperature" notes={plant.temperatureNotes} />
+        <CardContent className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <CareSection
+            title="Light"
+            icon={Sun}
+            value={lightRequirementLabel(plant.lightRequirement)}
+            notes={plant.lightNotes}
+          />
+          <CareSection title="Temperature" icon={Thermometer} notes={plant.temperatureNotes} />
           <CareSection
             title="Water"
+            icon={Droplets}
             value={plant.wateringIntervalDays ? `Every ${plant.wateringIntervalDays} days` : null}
             notes={plant.wateringNotes}
           />
-          <CareSection title="Soil" notes={plant.soilNotes} />
-          <CareSection title="Feeding" notes={plant.feedingNotes} />
-          <CareSection title="Pruning" notes={plant.pruningNotes} />
-          <CareSection title="Toxicity / warnings" notes={plant.toxicityNotes} />
+          <CareSection title="Soil" icon={Layers} notes={plant.soilNotes} />
+          <CareSection title="Feeding" icon={Sparkles} notes={plant.feedingNotes} />
+          <CareSection title="Pruning" icon={Scissors} notes={plant.pruningNotes} />
+          <CareSection title="Toxicity / warnings" icon={TriangleAlert} notes={plant.toxicityNotes} />
         </CardContent>
       </Card>
 
@@ -81,6 +115,7 @@ export function PlantDetailPage() {
           <CardContent>
             <CareSection
               title="Days to maturity"
+              icon={CalendarDays}
               value={
                 plant.daysToMaturityMin || plant.daysToMaturityMax
                   ? `${plant.daysToMaturityMin ?? '?'}-${plant.daysToMaturityMax ?? '?'} days`

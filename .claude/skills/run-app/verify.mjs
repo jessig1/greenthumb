@@ -94,7 +94,9 @@ async function main() {
     await page.waitForSelector('text=Choose a plant', { timeout: 10000 });
     await page.click('text=Choose a plant');
     await page.click('[role="option"]:has-text("Tomato")');
-    await page.click('button:has-text("Add plant")');
+    // Scoped to the wizard dialog - the app header has its own "Add plant" button that would
+    // otherwise match first and sit unclickable behind the dialog overlay.
+    await page.click('[role="dialog"] button:has-text("Add plant")');
     await page.waitForSelector('text=1x Tomato', { timeout: 10000 });
 
     await page.click('button:has-text("Next")');
